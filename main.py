@@ -1,8 +1,10 @@
 import pygame
 import random
 import json
+import base64
 import os
 
+from pygbag.support.cross.aio import temporary
 
 pygame.init()
 pygame.mixer.init()
@@ -15,10 +17,10 @@ SCREEN_HEIGHT = tile_size * 12
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 screen_rect = pygame.Rect(-tile_size*2,-tile_size*2,SCREEN_WIDTH + tile_size*4,SCREEN_HEIGHT+ tile_size*4)
 pygame.display.set_caption("Cheese factory")
-Icon = pygame.image.load('assets/icons/cheese_icon.png')
+Icon = pygame.image.load('assets/GUI/icons/cheese_icon.png')
 pygame.display.set_icon(Icon)
 
-num_map = open('assets/map')
+num_map = open('assets/map.txt')
 
 # FPS
 clock = pygame.time.Clock()
@@ -43,10 +45,10 @@ dev_tools = False
 allow_dev_tools = True
 
 # FONTS
-text_font = pygame.font.Font("assets/font.ttf", px*5)
-inventory_text_font = pygame.font.Font("assets/font.ttf", px*4)
-title_font = pygame.font.Font("assets/font.ttf", px*13)
-mid_title_font = pygame.font.Font("assets/font.ttf", px*7)
+text_font = pygame.font.Font("assets/fonts/font.ttf", px * 5)
+inventory_text_font = pygame.font.Font("assets/fonts/font.ttf", px * 4)
+title_font = pygame.font.Font("assets/fonts/font.ttf", px * 13)
+mid_title_font = pygame.font.Font("assets/fonts/font.ttf", px * 7)
 
 #COLORS
 white = (255, 255, 255)
@@ -82,6 +84,11 @@ def draw_text(text, font, text_col, x, y, centered = False):
         screen.blit(img, ((SCREEN_WIDTH - img.get_size()[0]) / 2, y))
     else:
         screen.blit(img, (x, y))
+
+def set_image(file):
+    size = (pygame.image.load("assets/" + file + ".png").get_size()[0]*px,
+            pygame.image.load("assets/" + file + ".png").get_size()[1]*px)
+    return pygame.transform.scale(pygame.image.load("assets/" + file + ".png"), size)
 
 # TILES
 
@@ -142,13 +149,19 @@ class tiles:
         self.water_11_tile = tile('assets/tiles/water_11.png', True, solid_y=tile_size / 2 - px*2,
                                   solid_size_y=tile_size / 2 + px*2)  # 16
         self.water_12_tile = tile('assets/tiles/water_12.png', True, solid_size_x=tile_size / 2)  # 17
-        self.road_0_tile = tile('assets/tiles/road_0.png')  # 18
-        self.road_1_tile = tile('assets/tiles/road_1.png')  # 19
-        self.road_2_tile = tile('assets/tiles/road_2.png')  # 20
-        self.road_3_tile = tile('assets/tiles/road_3.png')  # 21
-        self.road_4_tile = tile('assets/tiles/road_4.png')  # 22
-        self.road_5_tile = tile('assets/tiles/road_5.png')  # 23
-        self.road_6_tile = tile('assets/tiles/road_6.png')  # 24
+        self.road_0_tile = tile('assets/tiles/road_00.png')  # 18
+        self.road_1_tile = tile('assets/tiles/road_01.png')  # 19
+        self.road_2_tile = tile('assets/tiles/road_02.png')  # 20
+        self.road_3_tile = tile('assets/tiles/road_03.png')  # 21
+        self.road_4_tile = tile('assets/tiles/road_04.png')  # 22
+        self.road_5_tile = tile('assets/tiles/road_05.png')  # 23
+        self.road_6_tile = tile('assets/tiles/road_06.png')  # 24
+        self.road_7_tile = tile('assets/tiles/road_07.png')  # 25
+        self.road_8_tile = tile('assets/tiles/road_08.png')  # 26
+        self.road_9_tile = tile('assets/tiles/road_09.png')  # 27
+        self.road_10_tile = tile('assets/tiles/road_10.png') # 28
+        self.road_11_tile = tile('assets/tiles/road_11.png') # 29
+        self.road_12_tile = tile('assets/tiles/road_12.png') # 30
 
         self.all_tiles = [self.grass_0_tile, self.grass_1_tile, self.grass_2_tile, self.grass_3_tile,
                           self.grass_4_tile, self.water_0_tile, self.water_1_tile, self.water_2_tile, self.water_3_tile,
@@ -156,7 +169,8 @@ class tiles:
                           self.water_5_tile, self.water_6_tile, self.water_7_tile, self.water_8_tile, self.water_9_tile,
                           self.water_10_tile, self.water_11_tile, self.water_12_tile, self.road_0_tile,
                           self.road_1_tile, self.road_2_tile,
-                          self.road_3_tile, self.road_4_tile, self.road_5_tile, self.road_6_tile]
+                          self.road_3_tile, self.road_4_tile, self.road_5_tile, self.road_6_tile, self.road_7_tile,
+                          self.road_8_tile, self.road_9_tile, self.road_10_tile, self.road_11_tile, self.road_12_tile]
 
     def draw_map(self, num_map):
         num_map.seek(0)
@@ -205,19 +219,20 @@ class tiles:
 
 class decor:
     def __init__(self):
-        self.red_tulip = pygame.transform.scale(pygame.image.load("assets/decors/red_tulip.png"), (px*7, px*10))
-        self.yellow_tulip = pygame.transform.scale(pygame.image.load("assets/decors/yellow_tulip.png"), (px*7, px*10))
-        self.red_flower = pygame.transform.scale(pygame.image.load("assets/decors/red_flower.png"), (px*7, px*12))
-        self.yellow_flower = pygame.transform.scale(pygame.image.load("assets/decors/yellow_flower.png"), (px*7, px*12))
-        self.red_flower_2 = pygame.transform.scale(pygame.image.load("assets/decors/red_flower_2.png"), (px*12, px*13))
-        self.yellow_flower_2 = pygame.transform.scale(pygame.image.load("assets/decors/yellow_flower_2.png"), (px*12, px*13))
-        self.mushroom = pygame.transform.scale(pygame.image.load("assets/decors/mushroom.png"), (px*8, px*8))
-        self.small_stone = pygame.transform.scale(pygame.image.load("assets/decors/small_stone.png"), (px*10, px*7))
-        self.big_stone = pygame.transform.scale(pygame.image.load("assets/decors/big_stone.png"), (tile_size-px, px*12))
+        self.red_tulip = set_image("decors/red_tulip")
+        self.yellow_tulip = set_image("decors/yellow_tulip")
+        self.red_flower = set_image("decors/red_flower")
+        self.yellow_flower = set_image("decors/yellow_flower")
+        self.red_flower_2 = set_image("decors/red_flower_2")
+        self.yellow_flower_2 = set_image("decors/yellow_flower_2")
+        self.mushroom = set_image("decors/mushroom")
+        self.small_stone = set_image("decors/small_stone")
+        self.big_stone = set_image("decors/big_stone")
 
         self.all_decors = [self.mushroom, self.red_tulip, self.red_flower, self.red_flower_2, self.yellow_flower,
                            self.yellow_flower_2, self.yellow_tulip, self.small_stone]
         self.decors = []
+
     def setup_decors(self):
         hitboxes = []
 
@@ -269,6 +284,8 @@ class collision_checker:
     def check_tile_collision(self, rect, entity):
         for i in tiles.solid_rects:
             if i.colliderect(rect):
+                if entity is not player:
+                    entity.wait = 130
                 if rect == entity.top_hitbox:
                     entity.can_move_up = False
                 elif rect == entity.bottom_hitbox:
@@ -354,18 +371,17 @@ class collision_checker:
     def check_entities_collision(self, rect, current_entity):
         for entity in entities:
             if entity != current_entity:
-                if rect == current_entity.top_hitbox:
-                    if entity.main_hitbox.colliderect(rect):
+                if entity.main_hitbox.colliderect(rect):
+                    if current_entity is not player:
+                        entity.wait = 130
+                    if rect == current_entity.top_hitbox:
                         current_entity.can_move_up = False
-                elif rect == current_entity.bottom_hitbox:
-                    if entity.main_hitbox.colliderect(rect):
-                        current_entity.can_move_down = False
-                elif rect == current_entity.left_hitbox:
-                    if entity.main_hitbox.colliderect(rect):
-                        current_entity.can_move_left = False
-                elif rect == current_entity.right_hitbox:
-                    if entity.main_hitbox.colliderect(rect):
-                        current_entity.can_move_right = False
+                    elif rect == current_entity.bottom_hitbox:
+                            current_entity.can_move_down = False
+                    elif rect == current_entity.left_hitbox:
+                            current_entity.can_move_left = False
+                    elif rect == current_entity.right_hitbox:
+                            current_entity.can_move_right = False
 
     def check_player_collision(self, rect, entity):
         if rect == entity.top_hitbox:
@@ -394,7 +410,13 @@ class collision_checker:
                         copy_img = i["image"].__copy__()
                         copy_img.set_alpha(255)
                         i["image"] = copy_img
+
             if i["hitbox"].colliderect(rect):
+                if entity is not player:
+                    entity.wait = 130
+                    if i["name"] == "drinker" or i ["name"] == "feeder" or i["name"] == "hay_bale":
+                        if entity.max_cool_down > 10:
+                            entity.max_cool_down -= 3
                 if "interactable" not in i or i["interactable"] != 1:
                     if rect == entity.top_hitbox:
                         entity.can_move_up = False
@@ -455,18 +477,26 @@ class collision_checker:
                 return
         player.can_place_block = True
 
-    def check_block_break(self, attack_rect):
+    def check_block_hit(self, attack_rect):
         for block in blocks.all_blocks:
             if attack_rect.colliderect(block["hitbox"]):
                 if block["life"] < 1000:
                     block["life"] -= inventory.hand_item["strength"]
                     blocks.draw_life_bar(block, block["max_life"], block["life"])
                     inventory.hand_item["durability"] -= 1
+                    if inventory.inventory_slots[inventory.selected_slot]["item"]["durability"] <= 0:
+                        inventory.inventory_slots[inventory.selected_slot]["value"] = 0
+
+                break
+    def check_block_break(self, attack_rect):
+        for block in blocks.all_blocks:
+            if attack_rect.colliderect(block["hitbox"]):
+                if block["life"] < 1000:
                     if block["life"] <= 0:
                         sounds.play_sound(sounds.break_sfx)
                         blocks.drop_item(block["drop"], (block["x"], block["y"]))
                         if "fence" in block:
-                            blocks.fences.remove(block)
+                            blocks.all_fences.remove(block)
                             blocks.organize_fences()
 
                         if "second_block" in block:
@@ -486,14 +516,10 @@ class collision_checker:
                                     elif player.direction == "down":
                                         blocks.set_block(blocks.log,
                                                          (block["x"] + tile_size, block["y"] + tile_size*3.5))
-
-
                         blocks.all_blocks.remove(block)
-                    if inventory.inventory_slots[inventory.selected_slot]["item"]["durability"] <= 0:
-                        inventory.inventory_slots[inventory.selected_slot]["value"] = 0
+
 
                 break
-
     def check_trader_col(self, rect, entity):
         for trader in traders:
             if trader.main_hitbox.colliderect(rect):
@@ -548,14 +574,14 @@ class collision_checker:
 
 class market:
     def __init__(self):
-        self.offer_window = pygame.transform.scale(pygame.image.load("assets/icons/offer_window.png"), (111*px, 55*px))
-        self.market_base = pygame.transform.scale(pygame.image.load("assets/icons/market_base.png"), (111*px, 77*px))
-        self.minus_icon = pygame.transform.scale(pygame.image.load("assets/icons/minus_icon.png"), (px*5, px))
-        self.mini_coin = pygame.transform.scale(pygame.image.load("assets/icons/mini_coin.png"), (px*7, px*7))
-        self.arrow_icon = pygame.transform.scale(pygame.image.load("assets/icons/arrow_icon.png"), (px*6, px*5))
-        self.default_exit_button = pygame.transform.scale(pygame.image.load("assets/icons/exit_button.png"), (13*px, 13*px))
-        self.selected_exit_button = pygame.transform.scale(pygame.image.load("assets/icons/selected_exit_button.png"),
-                                                           (13 * px, 13 * px))
+        self.offer_window = set_image("GUI/bases/offer_window")
+        self.market_base = set_image("GUI/bases/market_base")
+        self.minus_icon = set_image("GUI/icons/minus_icon")
+        self.mini_coin = set_image("GUI/icons/mini_coin")
+        self.arrow_icon = set_image("GUI/icons/arrow_icon")
+        self.default_exit_button = set_image("GUI/buttons/exit_button")
+        self.selected_exit_button = set_image("GUI/buttons/selected_exit_button")
+
         self.exit_button = self.default_exit_button
         self.def_button_img = paused_menu.button_img
         self.selected_button_img = paused_menu.selected_img
@@ -565,22 +591,21 @@ class market:
         self.selected_small_button_img = start_menu.selected_button_img
         self.small_button_img = self.def_small_button_img
 
-        self.minus_button = pygame.transform.scale(pygame.image.load("assets/icons/minus_button.png"), (9 * px, 10 * px))
-        self.selected_minus_button = pygame.transform.scale(pygame.image.load("assets/icons/selected_minus_button.png"),
-                                                   (9 * px, 10 * px))
-        self.pressed_minus_button = pygame.transform.scale(pygame.image.load("assets/icons/pressed_minus_button.png"),
-                                                          (9 * px, 10 * px))
+        self.minus_button = set_image("GUI/buttons/minus_button")
+        self.selected_minus_button = set_image("GUI/buttons/selected_minus_button")
+        self.pressed_minus_button = set_image("GUI/buttons/pressed_minus_button")
         self.value_minus_button = self.minus_button
         self.price_minus_button = self.minus_button
-        self.plus_button = pygame.transform.scale(pygame.image.load("assets/icons/plus_button.png"), (9 * px, 10 * px))
-        self.selected_plus_button = pygame.transform.scale(pygame.image.load("assets/icons/selected_plus_button.png"),
-                                                           (9 * px, 10 * px))
-        self.pressed_plus_button = pygame.transform.scale(pygame.image.load("assets/icons/pressed_plus_button.png"),
-                                                           (9 * px, 10 * px))
+
+        self.plus_button = set_image("GUI/buttons/plus_button")
+        self.selected_plus_button = set_image("GUI/buttons/selected_plus_button")
+        self.pressed_plus_button = set_image("GUI/buttons/pressed_plus_button")
         self.value_plus_button = self.plus_button
         self.price_plus_button = self.plus_button
-        self.small_trash_button = pygame.transform.scale(pygame.image.load("assets/icons/small_trash_button.png"), (13*px, 13*px))
-        self.small_selected_trash_button = pygame.transform.scale(pygame.image.load("assets/icons/selected_small_trash.png"), (13*px, 13*px))
+
+        self.small_trash_button = set_image("GUI/buttons/small_trash_button")
+        self.small_selected_trash_button = set_image("GUI/buttons/selected_small_trash")
+
         self.left = SCREEN_WIDTH / 2 - px * 111 / 2
         self.top = SCREEN_HEIGHT / 3
         self.state = 0
@@ -778,30 +803,59 @@ class market:
         self.x_button = pygame.Rect(self.left + 97 * px, self.top - 9 * px, 13 * px, 13 * px)
         self.sell_button = pygame.Rect(self.left + (111 * px - 31 * px) / 2, self.top + tile_size * 2, 31 * px, 13 * px)
     def sell(self):
-        for offer in self.offers:
-            rnd_max = int(10000 + (offer[2]/offer[0]["price"] - 1)*10000)
+        for i in range(len(self.offers)):
+            offer = self.offers[i]
+            rnd_max = int(6000 + (offer[2]/offer[0]["price"] - 1)*4000)
             rnd = random.randint(1, rnd_max)
             if rnd == 1:
                 player.currency += offer[1]*offer[2]
-                self.offers.remove(offer)
+                self.offers.pop(i)
                 self.reset()
+                break
 
 
 
 class trade:
     def __init__(self):
+        self.selected_trade = None
         self.trades = []
-        self.trade_base = pygame.transform.scale(pygame.image.load('assets/icons/trade_base.png'), (111*px, 80 * px))
-        self.down_scroll = pygame.transform.scale(pygame.image.load('assets/icons/down_scroll.png'), (px*5, px*6))
-        self.up_scroll = pygame.transform.scale(pygame.image.load('assets/icons/up_scroll.png'), (px*5, px*6))
-        self.plus_icon = pygame.transform.scale(pygame.image.load('assets/icons/plus_icon.png'), (px*5, px*5))
-        self.slash_icon = pygame.transform.scale(pygame.image.load('assets/icons/slash_icon.png'), (px*4, px*5))
+        self.trade_base = set_image("GUI/bases/trade_base")
+        self.down_scroll = set_image("GUI/icons/down_scroll")
+        self.up_scroll = set_image("GUI/icons/up_scroll")
+        self.plus_icon = set_image("GUI/icons/plus_icon")
+        self.slash_icon = set_image("GUI/icons/slash_icon")
+        self.offer_window = set_image("GUI/bases/offer_window")
+
+        self.small_button_img = set_image("GUI/buttons/small_button")
+        self.pressed_button_img = set_image("GUI/buttons/button_pressed")
+        self.selected_button_img = set_image("GUI/buttons/button_selected")
+        self.small_button = self.small_button_img
+
+        self.default_exit_button = set_image("GUI/buttons/exit_button")
+        self.selected_exit_button = set_image("GUI/buttons/selected_exit_button")
+
+        self.plus_button = market.plus_button
+        self.selected_plus_button = market.selected_plus_button
+        self.pressed_plus_button = market.pressed_plus_button
+        self.plus_button_img = self.plus_button
+        self.minus_button = market.minus_button
+        self.selected_minus_button = market.selected_minus_button
+        self.pressed_minus_button = market.pressed_minus_button
+        self.minus_button_img = self.minus_button
+
+        self.exit_button = self.default_exit_button
+        self.button_time = 0
         self.trade_item_rects = []
         self.trade_item_rects_2 = []
         self.trade_rects = []
+
         self.can_buy = 0
         self.left = SCREEN_WIDTH / 2 - px * 111 / 2
         self.top = SCREEN_HEIGHT / 3
+        self.exit_rect = pygame.Rect(self.left + 97 * px, self.top - 9 * px, 13*px, 13*px)
+        self.plus_rect = pygame.Rect(0,0,0,0)
+        self.minus_rect = pygame.Rect(0,0,0,0)
+        self.buy_rect = pygame.Rect(self.left + 80 * px / 2, self.top + tile_size * 1.5 + 9 * px, 31*px, 13*px)
         self.down_rect = pygame.Rect(
             (self.left + tile_size * 3 - px*2, SCREEN_HEIGHT / 3 + tile_size * 4 + px*7, px*9, px*8))
         self.up_rect = pygame.Rect(
@@ -809,11 +863,13 @@ class trade:
         self.first_trade = 0
         self.s = pygame.Surface((px*9, px*8))
         self.s.set_alpha(100)
-
+        self.state = 0
+        self.value = 1
     def draw_trades(self):
         screen.blit(self.trade_base, (self.left, self.top))
         y = self.top + px*6
 
+        # drow arrows
         if self.first_trade + 5 != len(self.trades) and len(self.trades) > 4:
             color_1 = green
         else:
@@ -843,10 +899,6 @@ class trade:
             i = self.trades[j]
             if j < self.first_trade + b:
                 if len(i) < 3:
-                    if i[1] > player.currency:
-                        color = gray
-                    else:
-                        color = green
 
                     img = text_font.render(str(i[1]), True, white)
                     start_x = self.left + ((111*px - (img.get_size()[0] + tile_size*2 + 8*px))/2)
@@ -859,19 +911,7 @@ class trade:
                     screen.blit(i[0]["image"], (start_x + 24*px + img.get_size()[0], y))
                     y += tile_size + px
 
-                    # screen.blit(start_menu.small_button_img, (self.left + tile_size * 4 + px*5, y + px*2))
-                    # # pygame.draw.rect(screen, color,
-                    # #                  (self.left + tile_size * 4 + px*9, y + px*5, tile_size + px*7, px*7))
-                    # draw_text("buy", text_font, white, self.left + tile_size * 4 + px*10,
-                    #           y + px*5)
-
-
                 else:
-
-                    if i[1] > player.currency or self.has_item(self.trades[j][2][0]) < self.trades[j][2][1]:
-                        color = gray
-                    else:
-                        color = green
 
                     img = text_font.render(str(i[1]), True, white)
                     img_2 = text_font.render(str(i[2][1]), True, white)
@@ -890,15 +930,76 @@ class trade:
                     screen.blit(i[2][0]["image"], (start_x + tile_size + px*2 + img.get_size()[0] + img_2.get_size()[0], y))
                     screen.blit(market.arrow_icon, (start_x + tile_size*2+ px*2+ img.get_size()[0] + img_2.get_size()[0], y + px * 6))
                     screen.blit(i[0]["image"], (start_x + tile_size*2  + px *10+ img.get_size()[0] + img_2.get_size()[0], y))
-                    # screen.blit(start_menu.small_button_img, (self.left + tile_size * 4 + px*10, y + px * 2))
-                    # # pygame.draw.rect(screen, color,
-                    # #                 (self.left + tile_size * 4 + px * 9, y + px * 5, tile_size + px * 7, px * 7))
-                    # draw_text("buy", text_font, white, self.left + tile_size * 5 - px,
-                    #           y + px * 5)
                     y += tile_size + px
             else:
                 break
             j += 1
+
+        if self.state == 1:
+            screen.blit(self.offer_window, (self.left, self.top))
+            screen.blit(self.exit_button, (self.left + 97 * px, self.top - 9 * px))
+            if len(self.selected_trade) < 3:
+                y  = self.top + tile_size/2 - px
+                img = text_font.render(str(self.selected_trade[1]*self.value), True, white)
+                start_x = self.left + ((111 * px - (img.get_size()[0] + tile_size * 2 + 8 * px)) / 2)
+
+                draw_text(str(self.selected_trade[1]*self.value), text_font, white, start_x,
+                          y + px * 5)
+
+                screen.blit(market.mini_coin, (start_x + px * 2 + img.get_size()[0], y + px * 5))
+                screen.blit(market.arrow_icon, (start_x + img.get_size()[0] + 14 * px, y + px * 6))
+
+                screen.blit(self.selected_trade[0]["image"], (start_x + 24 * px + img.get_size()[0], y))
+
+                self.minus_rect = pygame.Rect(start_x + 22 * px + img.get_size()[0], y + tile_size + px, 9 * px,
+                                              10 * px)
+                self.plus_rect = pygame.Rect(start_x + tile_size * 2 + px + img.get_size()[0], y + tile_size + px,
+                                             9 * px, 10 * px)
+
+                screen.blit(self.minus_button_img, (start_x + 22 * px + img.get_size()[0], y + tile_size + px))
+                screen.blit(self.plus_button_img, (start_x + tile_size*2 + px + img.get_size()[0], y + tile_size + px))
+
+                draw_text(str(self.value), inventory_text_font, white,
+                          start_x + 19 * px + img.get_size()[0] + tile_size ,
+                          y + tile_size - px *4)
+
+            else:
+                y = self.top + tile_size/2 - px
+                img = text_font.render(str(self.selected_trade[1]*self.value), True, white)
+                img_2 = text_font.render(str(self.selected_trade[2][1]*self.value), True, white)
+
+                start_x = self.left + (
+                            (111 * px - (tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0])) / 2)
+
+                draw_text(str(self.selected_trade[1]*self.value), text_font, white, start_x,
+                          y + px * 5)
+
+                screen.blit(market.mini_coin, (start_x + px * 2 + img.get_size()[0], y + px * 5))
+                screen.blit(self.plus_icon, (start_x + px * 11 + img.get_size()[0], y + px * 6))
+                draw_text(str(self.selected_trade[2][1]*self.value), text_font, white,
+                          start_x + px * 18 + img.get_size()[0], y + px * 5)
+
+                screen.blit(self.selected_trade[2][0]["image"],
+                            (start_x + tile_size + px * 2 + img.get_size()[0] + img_2.get_size()[0], y))
+                screen.blit(market.arrow_icon,
+                            (start_x + tile_size * 2 + px * 2 + img.get_size()[0] + img_2.get_size()[0], y + px * 6))
+                screen.blit(self.selected_trade[0]["image"],
+                            (start_x + tile_size * 2 + px * 10 + img.get_size()[0] + img_2.get_size()[0], y))
+
+                self.minus_rect = pygame.Rect(start_x + tile_size * 2 + px * 8 + img.get_size()[0] +
+                                              img_2.get_size()[0], y + tile_size + px, 9 * px, 10 * px)
+                self.plus_rect = pygame.Rect(start_x + tile_size * 3 + px * 3 + img.get_size()[0] +
+                                             img_2.get_size()[0], y + tile_size + px, 9 * px, 10 * px)
+                screen.blit(self.minus_button_img, (start_x + tile_size * 2 + px * 8 + img.get_size()[0] +
+                                                img_2.get_size()[0], y + tile_size + px))
+                screen.blit(self.plus_button_img, (start_x + tile_size * 3 + px * 3 + img.get_size()[0] +
+                                               img_2.get_size()[0], y + tile_size + px))
+
+                draw_text(str(self.value), inventory_text_font, white,
+                          start_x + tile_size * 3 + px * 5 + img.get_size()[0] + img_2.get_size()[0],
+                          y + tile_size - px * 4)
+            screen.blit(self.small_button, (self.left + 40*px, y + tile_size + 12*px))
+            draw_text("buy", text_font, white, self.left + 40*px, y + tile_size + 15*px, True)
 
     def draw_item_info(self, item, pos, value=None):
         s = pygame.Surface((tile_size * 3, tile_size))
@@ -906,126 +1007,190 @@ class trade:
         s.fill((50*px, 25*px, 0))
         screen.blit(s, pos)
         draw_text(item["name"], inventory_text_font, white, pos[0] + px*2, pos[1] + px*2)
-        if value is not None:
-            draw_text(str(value[0]) + "  " + str(value[1]), inventory_text_font, white, pos[0] + px*2,
-                      pos[1] + px*12)
-            screen.blit(self.slash_icon, (pos[0] + px*13, pos[1] + px*12))
 
     def handle_trades(self):
         pos = pygame.mouse.get_pos()
         mouse_rect = pygame.Rect(pos[0], pos[1], 3, 3)
         y = SCREEN_HEIGHT / 3 + px*6
+        if self.state == 0:
 
-        if mouse_rect.colliderect(self.down_rect):
-            if player.left_clicked and self.can_buy == 0 and self.first_trade + 5 != len(self.trades) and len(
-                    self.trades) > 4:
-                self.first_trade += 1
-                self.can_buy += 1
-                self.trade_rects = []
-                self.trade_item_rects = []
-                self.trade_item_rects_2 = []
-        elif mouse_rect.colliderect(self.up_rect):
-            if player.left_clicked and self.can_buy == 0 and self.first_trade != 0:
-                self.first_trade -= 1
-                self.can_buy += 1
-                self.trade_rects = []
-                self.trade_item_rects = []
-                self.trade_item_rects_2 = []
-        if len(self.trades) < 4:
-            b = len(self.trades) - 1
-        else:
-            b = 4
+            # Scrolling
+            if mouse_rect.colliderect(self.down_rect):
+                if player.left_clicked and self.can_buy == 0 and self.first_trade + 5 != len(self.trades) and len(
+                        self.trades) > 4:
+                    self.first_trade += 1
+                    self.can_buy += 1
+                    self.trade_rects = []
+                    self.trade_item_rects = []
+                    self.trade_item_rects_2 = []
+            elif mouse_rect.colliderect(self.up_rect):
+                if player.left_clicked and self.can_buy == 0 and self.first_trade != 0:
+                    self.first_trade -= 1
+                    self.can_buy += 1
+                    self.trade_rects = []
+                    self.trade_item_rects = []
+                    self.trade_item_rects_2 = []
 
-        j = self.first_trade
-        if not self.trade_item_rects:
-            for i in range(b):
-                start_x = None
-                if len(self.trades[j]) >= 3:
-                    i = self.trades[j]
-                    img = text_font.render(str(i[1]), True, white)
-                    img_2 = text_font.render(str(i[2][1]), True, white)
 
-                    start_x = self.left + (
-                                (111 * px - (tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0])) / 2)
-                    rect_2 = pygame.Rect((start_x + tile_size + px*2 + img.get_size()[0] + img_2.get_size()[0], y, tile_size, tile_size))
+            if len(self.trades) < 4:
+                b = len(self.trades) - 1
+            else:
+                b = 4
 
-                    self.trade_item_rects_2.append(rect_2)
-                else:
-                    self.trade_item_rects_2.append(None)
-                if start_x is not None:
-                    rect = pygame.Rect((start_x + tile_size*2  + px *10+ img.get_size()[0] + img_2.get_size()[0], y, tile_size, tile_size))
-                else:
-                    i = self.trades[j]
-                    img = text_font.render(str(i[1]), True, white)
-                    start_x = self.left + ((111 * px - (img.get_size()[0] + tile_size * 2 + 8 * px)) / 2)
-                    rect = pygame.Rect((start_x + 24*px + img.get_size()[0], y,
-                                        tile_size, tile_size))
-                self.trade_item_rects.append(rect)
-                y += tile_size + px
-                j += 1
 
-        j = self.first_trade
-        y = SCREEN_HEIGHT / 3 + px*6
-        for i in self.trade_item_rects:
-            if mouse_rect.colliderect(i):
-                self.draw_item_info(self.trades[j][0], (self.left - tile_size * 3, y))
-            j += 1
-            y += tile_size + px
+            # create trade_item_rects
+            j = self.first_trade
+            if not self.trade_item_rects:
+                for i in range(b):
+                    start_x = None
+                    if len(self.trades[j]) >= 3:
+                        i = self.trades[j]
+                        img = text_font.render(str(i[1]), True, white)
+                        img_2 = text_font.render(str(i[2][1]), True, white)
 
-        j = self.first_trade
-        y = SCREEN_HEIGHT / 3 + px*6
-        for i in self.trade_item_rects_2:
-            if i is not None:
+                        start_x = self.left + (
+                                    (111 * px - (tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0])) / 2)
+                        rect_2 = pygame.Rect((start_x + tile_size + px*2 + img.get_size()[0] + img_2.get_size()[0], y, tile_size, tile_size))
+
+                        self.trade_item_rects_2.append(rect_2)
+                    else:
+                        self.trade_item_rects_2.append(None)
+                    if start_x is not None:
+                        rect = pygame.Rect((start_x + tile_size*2  + px *10+ img.get_size()[0] + img_2.get_size()[0], y, tile_size, tile_size))
+                    else:
+                        i = self.trades[j]
+                        img = text_font.render(str(i[1]), True, white)
+                        start_x = self.left + ((111 * px - (img.get_size()[0] + tile_size * 2 + 8 * px)) / 2)
+                        rect = pygame.Rect((start_x + 24*px + img.get_size()[0], y,
+                                            tile_size, tile_size))
+                    self.trade_item_rects.append(rect)
+                    y += tile_size + px
+                    j += 1
+
+            # show item info
+            j = self.first_trade
+            y = SCREEN_HEIGHT / 3 + px*6
+            for i in self.trade_item_rects:
                 if mouse_rect.colliderect(i):
-                    self.draw_item_info(self.trades[j][2][0],
-                                        (self.left - tile_size * 3, y),
-                                        (self.has_item(self.trades[j][2][0]), (self.trades[j][2][1])))
-            j += 1
-            y += tile_size + px
-
-        y = SCREEN_HEIGHT / 3 + px*6
-        c = self.first_trade
-        if not self.trade_rects:
-            for i in range(b):
-                i = self.trades[c]
-                if len(self.trades[c]) >= 3:
-                    img = text_font.render(str(i[1]), True, white)
-                    img_2 = text_font.render(str(i[2][1]), True, white)
-
-                    start_x = self.left + (
-                            (111 * px - (tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0])) / 2)
-
-                    rect = pygame.Rect((start_x, y + px*4, tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0], px*9))
-                else:
-                    img = text_font.render(str(i[1]), True, white)
-                    start_x = self.left + ((111 * px - (img.get_size()[0] + tile_size * 2 + 8 * px)) / 2)
-                    rect = pygame.Rect((start_x, y + px*3, img.get_size()[0] + tile_size * 2 + 8 * px, px*10))
-                self.trade_rects.append(rect)
+                    self.draw_item_info(self.trades[j][0], (self.left - tile_size * 3, y))
+                j += 1
                 y += tile_size + px
-                c += 1
 
-        j = self.first_trade
-        for y in self.trade_rects:
-            if mouse_rect.colliderect(y):
-                if len(self.trades[j]) < 3:
-                    if player.left_clicked and player.currency >= self.trades[j][1] and self.can_buy == 0:
-                        items.set_item(self.trades[j][0], player.pos_x, player.pos_y, 1)
-                        player.currency -= self.trades[j][1]
-                        self.can_buy += 1
-                else:
-                    if player.left_clicked and player.currency >= self.trades[j][1] and self.can_buy == 0 and \
-                            self.has_item(self.trades[j][2][0]) >= self.trades[j][2][1]:
-                        self.remove_items(self.trades[j][2][0], self.trades[j][2][1])
-                        items.set_item(self.trades[j][0], player.pos_x, player.pos_y, 1)
-                        player.currency -= self.trades[j][1]
-                        self.can_buy += 1
+            # show item info2
+            j = self.first_trade
+            y = SCREEN_HEIGHT / 3 + px*6
+            for i in self.trade_item_rects_2:
+                if i is not None:
+                    if mouse_rect.colliderect(i):
+                        self.draw_item_info(self.trades[j][2][0],
+                                            (self.left - tile_size * 3, y),
+                                            (self.has_item(self.trades[j][2][0]), (self.trades[j][2][1])))
+                j += 1
+                y += tile_size + px
 
-            j += 1
 
-        if self.can_buy > 0 and self.can_buy != 13:
+            # create trade rects
+            y = SCREEN_HEIGHT / 3 + px*6
+            c = self.first_trade
+            if not self.trade_rects:
+                for i in range(b):
+                    i = self.trades[c]
+                    if len(self.trades[c]) >= 3:
+                        img = text_font.render(str(i[1]), True, white)
+                        img_2 = text_font.render(str(i[2][1]), True, white)
+
+                        start_x = self.left + (
+                                (111 * px - (tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0])) / 2)
+
+                        rect = pygame.Rect((start_x, y + px*4, tile_size * 3 + px * 10 + img.get_size()[0] + img_2.get_size()[0], px*9))
+                    else:
+                        img = text_font.render(str(i[1]), True, white)
+                        start_x = self.left + ((111 * px - (img.get_size()[0] + tile_size * 2 + 8 * px)) / 2)
+                        rect = pygame.Rect((start_x, y + px*3, img.get_size()[0] + tile_size * 2 + 8 * px, px*10))
+                    self.trade_rects.append(rect)
+                    y += tile_size + px
+                    c += 1
+
+            # check trade rects
+            j = self.first_trade
+            for y in self.trade_rects:
+                if mouse_rect.colliderect(y):
+                    if player.left_clicked:
+                        self.selected_trade = self.trades[j]
+                        player.left_clicked = False
+
+                        self.state = 1
+                j += 1
+        else:
+            # Buy
+            if self.button_time > 0:
+                self.button_time -=1
+            if mouse_rect.colliderect(self.buy_rect):
+                if self.button_time == 0:
+                    self.small_button = self.selected_button_img
+                    self.plus_button_img = self.plus_button
+                    self.minus_button_img = self.minus_button
+                if player.left_clicked:
+                    if len(self.selected_trade) < 3:
+                            if player.left_clicked and player.currency >= self.selected_trade[1]*self.value and self.can_buy == 0:
+                                self.small_button = self.pressed_button_img
+                                self.button_time = 20
+                                items.set_item(self.selected_trade[0], player.pos_x, player.pos_y, self.value)
+                                player.currency -= self.selected_trade[1]*self.value
+                                self.can_buy += 1
+                    else:
+                            if player.left_clicked and player.currency >= self.selected_trade[1]*self.value and self.can_buy == 0 and \
+                                    self.has_item(self.selected_trade[2][0]) >= self.selected_trade[2][1]*self.value:
+                                self.small_button = self.pressed_button_img
+                                self.button_time = 20
+                                self.remove_items(self.selected_trade[2][0], self.selected_trade[2][1]*self.value)
+                                items.set_item(self.selected_trade[0], player.pos_x, player.pos_y, self.value)
+                                player.currency -= self.selected_trade[1]*self.value
+                                self.can_buy += 1
+
+
+
+            elif mouse_rect.colliderect(self.exit_rect):
+                self.exit_button = self.selected_exit_button
+                if player.left_clicked:
+                    self.selected_trade = None
+                    self.value = 1
+                    self.state = 0
+            elif mouse_rect.colliderect(self.minus_rect):
+                if self.button_time == 0:
+                    self.minus_button_img = self.selected_minus_button
+                    self.plus_button_img = self.plus_button
+                    self.small_button = self.small_button_img
+                if player.left_clicked:
+                    if self.value > 1 and self.can_buy == 0:
+                        self.button_time = 20
+                        self.minus_button_img = self.pressed_minus_button
+                        self.can_buy = 1
+                        self.value -= 1
+            elif mouse_rect.colliderect(self.plus_rect):
+                if self.button_time == 0:
+                    self.plus_button_img = self.selected_plus_button
+                    self.small_button = self.small_button_img
+                    self.minus_button_img = self.minus_button
+                if player.left_clicked:
+                    if self.selected_trade[1]*(self.value + 1) < 1000 and self.can_buy == 0 and\
+                        self.value < self.selected_trade[0]["max_stack"]:
+                        self.button_time = 20
+                        self.plus_button_img = self.pressed_plus_button
+                        self.can_buy = 1
+                        self.value += 1
+            else:
+                self.small_button = self.small_button_img
+                self.exit_button = self.default_exit_button
+                self.plus_button_img = self.plus_button
+                self.minus_button_img = self.minus_button
+
+        if self.can_buy > 0 and self.can_buy != 12:
             self.can_buy += 1
-        elif self.can_buy == 13:
+        elif self.can_buy == 12:
             self.can_buy = 0
+
+
 
     def has_item(self, item):
         number = 0
@@ -1049,23 +1214,21 @@ class trade:
         self.trade_item_rects_2 = []
         self.trade_rects = []
         self.first_trade = 0
+        self.state = 0
+        self.value = 1
+        self.selected_trade = None
 
 
 class blocks:
     def __init__(self):
-        self.fences = []
+        self.all_fences = []
         self.pos_x = 0
         self.pos_y = 0
         self.random_tick_speed = 10
-        self.tree = {
-            "image": pygame.transform.scale(pygame.image.load('assets/blocks/block_tree.png'), (tile_size * px, 54*px)),
-            "hitbox": pygame.Rect(tile_size - px*2, tile_size * 2, tile_size + px*4, tile_size + px*8), "max_life": 3,
-            "life": 3,
-            "x": 0, "y": 0, "def_hit_box": [tile_size - px*2, tile_size * 2, tile_size + px*4, tile_size + px*8], "name": "tree"}
         self.trunk = {
             "image": pygame.transform.scale(pygame.image.load('assets/blocks/trunk.png'), (tile_size, 14 * px)),
             "hitbox": pygame.Rect(px, 0, tile_size - px*2, tile_size - px*2), "max_life": 3,
-            "life": 2,
+            "life": 3,
             "x": 0, "y": 0, "def_hit_box": [px, 0, tile_size - px*2, tile_size - px*2],
             "name": "trunk"}
         self.small_trunk = {
@@ -1091,7 +1254,7 @@ class blocks:
             "image": pygame.transform.scale(pygame.image.load('assets/blocks/sapling.png'), (tile_size, tile_size)),
             "hitbox": pygame.Rect(tile_size - px*2, tile_size, tile_size - px*2, tile_size - px), "max_life": 3,
             "life": 1,
-            "x": 0, "y": 0, "def_hit_box": [px*6, px*10, px*3, px*6],
+            "x": 0, "y": 0, "def_hit_box": [px*6, px*10, px*4, px*6],
             "name": "sapling", "grow_to": (self.small_tree, - px*4, -tile_size + px*2)}
 
 
@@ -1103,8 +1266,8 @@ class blocks:
         self.bush = {
             "image": pygame.transform.scale(pygame.image.load('assets/blocks/block_bush.png'), (tile_size, tile_size)),
             "hitbox": pygame.Rect(0, tile_size - px*6, tile_size, 21), "max_life": 1, "life": 1, "x": 0, "y": 0,
-            "def_hit_box": [0, tile_size - px*6, tile_size, px*7], "name": "bush"}
-        fence_hitbox = [5*px, tile_size - px*8, 6*px, 10*px]
+            "def_hit_box": [px*2, tile_size - px*8, tile_size-px*4, px*8], "name": "bush"}
+        fence_hitbox = [5*px, tile_size - px*9, 6*px, 10*px]
         self.fence_0 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_0.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, tile_size - px*8, 33, 30), "max_life": 2, "life": 2, "x": 0, "y": 0,
@@ -1125,19 +1288,19 @@ class blocks:
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(0, tile_size - px*8, 33, 30), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_4"}
-        self.fence_6 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_6.png'),
+        self.fence_6 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_5.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, tile_size - px*8, tile_size - px*5, 30), "max_life": 2, "life": 2, "x": 0,
                         "y": 0, "def_hit_box": fence_hitbox, "fence": True, "name": "fence_6"}
-        self.fence_8 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_8.png'),
+        self.fence_8 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_10.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_8"}
-        self.fence_9 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_9.png'),
+        self.fence_9 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_7.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_9"}
-        self.fence_10 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_10.png'),
+        self.fence_10 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_8.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_10"}
@@ -1145,27 +1308,27 @@ class blocks:
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_11"}
-        self.fence_12 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_12.png'),
+        self.fence_12 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_13.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_12"}
-        self.fence_13 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_13.png'),
+        self.fence_13 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_9.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_13"}
-        self.fence_14 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_14.png'),
+        self.fence_14 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_6.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_14"}
-        self.fence_15 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_15.png'),
+        self.fence_15 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_12.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_15"}
-        self.fence_16 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_16.png'),
+        self.fence_16 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_15.png'),
                                                         (tile_size, tile_size)),
                         "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                         "def_hit_box": fence_hitbox, "fence": True, "name": "fence_16"}
-        self.fence_17 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_17.png'),
+        self.fence_17 = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/block_fence_14.png'),
                                                          (tile_size, tile_size)),
                          "hitbox": pygame.Rect(15, 6, 18, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
                          "def_hit_box": fence_hitbox, "fence": True, "name": "fence_17"}
@@ -1182,14 +1345,14 @@ class blocks:
                      "image_2": pygame.transform.scale(pygame.image.load('assets/blocks/gate_opened_1.png'),
                                                        (tile_size, tile_size)),
                      "hitbox": pygame.Rect(0, tile_size - px*8, tile_size, 10*px), "max_life": 2, "life": 2, "x": 0,
-                     "y": 0, "def_hit_box": [5*px, 0, 6*px, tile_size], "interactable": 0, "fence": True, "num": 0,
+                     "y": 0, "def_hit_box": [5*px, tile_size - px*14, 6*px, 15*px], "interactable": 0, "fence": True, "num": 0,
                      "name": "gate_1"}
 
         self.market = {"image": pygame.transform.scale(pygame.image.load('assets/blocks/market_desk.png'),
                                                        (tile_size * 3, tile_size * 2)),
-                       "hitbox": pygame.Rect(0, 9, tile_size * 3, tile_size * 2 - px), "max_life": 1000, "life": 1000,
+                       "hitbox": pygame.Rect(0, 9, tile_size * 3, tile_size * 2 - px), "max_life": 5, "life": 5,
                        "x": 0,
-                       "y": 0, "def_hit_box": [0, px*3, tile_size * 3, tile_size * 2 - px], "interactable": 2,
+                       "y": 0, "def_hit_box": [0, 9, tile_size * 3, tile_size * 2 - px], "interactable": 2,
                        "num": 0, "name": "market"}
         self.hay_bale = {
             "image": pygame.transform.scale(pygame.image.load('assets/blocks/hay_bale.png'), (tile_size, tile_size)),
@@ -1211,17 +1374,20 @@ class blocks:
         self.feeder = {
             "image": pygame.transform.scale(pygame.image.load('assets/blocks/feeder.png'), (tile_size * 2, tile_size)),
             "hitbox": pygame.Rect(0, px*4, tile_size * 2, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
-            "def_hit_box": [0, px*4, tile_size * 2, tile_size - px*2], "name": "feeder"}
+            "def_hit_box": [px, px*4, tile_size * 2 - px*2, tile_size - px*4], "name": "feeder"}
         self.drinker = {
             "image": pygame.transform.scale(pygame.image.load('assets/blocks/drinker.png'), (tile_size * 2, tile_size)),
             "hitbox": pygame.Rect(0, px*4, tile_size * 2, tile_size - px*2), "max_life": 2, "life": 2, "x": 0, "y": 0,
-            "def_hit_box": [0, px*4, tile_size * 2, tile_size - px*2], "name": "drinker"}
+            "def_hit_box": [px, px*4, tile_size * 2 - px*2, tile_size - px*4], "name": "drinker"}
 
-        self.blocks = [self.tree, self.tree_2, self.bush, self.fence_6, self.fence_4, self.fence_3, self.fence_2,
+        self.blocks = [self.tree_2, self.bush, self.fence_6, self.fence_4, self.fence_3, self.fence_2,
                        self.fence_1, self.fence_0, self.bucket, self.milk_bucket, self.water_bucket, self.hay_bale,
                        self.drinker, self.feeder, self.gate, self.gate_1, self.market, self.trunk, self.log, self.small_trunk, self.small_tree,
                        self.sapling, self.fence_8, self.fence_9, self.fence_10, self.fence_11, self.fence_12, self.fence_13,
                        self.fence_14, self.fence_15, self.fence_16, self.fence_17]
+        self.fences = [self.fence_8, self.fence_14, self.fence_9, self.fence_6, self.fence_13, self.fence_3, self.fence_0,
+                       self.fence_17, self.fence_10, self.fence_4, self.fence_1, self.fence_12, self.fence_2, self.fence_15,
+                       self.fence_11, self.fence_16]
 
         self.default_hitbox = (0, 0, tile_size, tile_size + px*2)
         self.all_blocks = []
@@ -1252,12 +1418,12 @@ class blocks:
                 if block_copy_rect.colliderect(block_rect):
                     self.all_blocks.insert(self.all_blocks.index(block) - 1, block_copy)
                     if "fence" in block_copy:
-                        self.fences.append(block_copy)
+                        self.all_fences.append(block_copy)
                         self.organize_fences()
                     return
         self.all_blocks.append(block_copy)
         if "fence" in block_copy:
-            self.fences.append(block_copy)
+            self.all_fences.append(block_copy)
             self.organize_fences()
 
     def update_blocks(self):
@@ -1296,18 +1462,12 @@ class blocks:
         self.pos_x = tile_size * -1
         self.pos_y = tile_size * 12
         self.set_block(self.small_tree, (self.pos_x, self.pos_y))
-        self.pos_x = tile_size * -9
-        self.pos_y = tile_size * 4
-        self.set_block(self.tree, (self.pos_x, self.pos_y))
         self.pos_x = tile_size * -5
         self.pos_y = tile_size * 4
         self.set_block(self.bush, (self.pos_x, self.pos_y))
-        self.pos_x = tile_size * -2
-        self.pos_y = tile_size * 4
-        self.set_block(self.market, (self.pos_x, self.pos_y))
+        self.set_block(self.market, (tile_size*-2, tile_size*3))
 
     def set_drops(self):
-        self.tree["drop"] = (items.wood, 6)
         self.tree_2["drop"] = (items.wood, 6, items.sapling, 2)
         self.trunk["drop"] = (items.wood, 4)
         self.small_tree["drop"] = (items.wood, 4)
@@ -1340,7 +1500,7 @@ class blocks:
         self.bucket["drop"] = (items.bucket, 1)
         self.milk_bucket["drop"] = (items.milk_bucket, 1)
         self.water_bucket["drop"] = (items.water_bucket, 1)
-        self.market["drop"] = (items.milk, 1)
+        self.market["drop"] = (items.market, 1)
 
     def drop_item(self, item, pos):
 
@@ -1352,14 +1512,13 @@ class blocks:
                            pos[1] + random.randint(-tile_size, tile_size), random.randint(1, item[3]))
 
     def draw_life_bar(self, block, max_life, life):
-        if life != 0:
-            dialogues.block = block
-            dialogues.max_life = max_life
-            dialogues.life = life
+        dialogues.block = block
+        dialogues.max_life = max_life
+        dialogues.life = life
 
     def organize_fences(self):
 
-        for fence in self.fences:
+        for fence in self.all_fences:
 
             hitbox_top = pygame.Rect(fence["x"] + cam.transform_x, fence["y"] - tile_size/2 + cam.transform_y,
                                      tile_size, tile_size/2)
@@ -1372,7 +1531,7 @@ class blocks:
 
             code = [0, 0, 0, 0]
 
-            for i in self.fences:
+            for i in self.all_fences:
                 if i != fence:
                     if hitbox_top.colliderect(i["hitbox"]):
                         code[0] = 1
@@ -1382,42 +1541,9 @@ class blocks:
                         code[2] = 1
                     elif hitbox_left.colliderect(i["hitbox"]):
                         code[3] = 1
+            index = code[0] + code[1]*2 + code[2]*4 + code[3]*8
             if fence["name"] != "gate" and fence["name"] != "gate_1":
-                if code == [0, 0, 0, 0]:
-                    block_copy = self.fence_8.copy()
-                elif code == [1, 0, 0, 0]:
-                    block_copy = self.fence_14.copy()
-                elif code == [0, 1, 0, 0]:
-                    block_copy = self.fence_9.copy()
-                elif code == [0, 0, 1, 0]:
-                    block_copy = self.fence_13.copy()
-                elif code == [0, 0, 0, 1]:
-                    block_copy = self.fence_10.copy()
-                elif code == [1, 1, 0, 0]:
-                    block_copy = self.fence_6.copy()
-                elif code == [1, 0, 1, 0]:
-                    block_copy = self.fence_3.copy()
-                elif code == [1, 0, 0, 1]:
-                    block_copy = self.fence_4.copy()
-                elif code == [1, 1, 1, 0]:
-                    block_copy = self.fence_17.copy()
-                elif code == [1, 1, 0, 1]:
-                    block_copy = self.fence_12.copy()
-                elif code == [1, 1, 1, 1]:
-                    block_copy = self.fence_16.copy()
-                elif code == [0, 1, 1, 0]:
-                    block_copy = self.fence_0.copy()
-                elif code == [0, 1, 0, 1]:
-                    block_copy = self.fence_1.copy()
-                elif code == [0, 1, 1, 1]:
-                    block_copy = self.fence_11.copy()
-                elif code == [0, 0, 1, 1]:
-                    block_copy = self.fence_2.copy()
-                elif code == [1, 0, 1, 1]:
-                    block_copy = self.fence_15.copy()
-                else:
-                    block_copy = fence
-
+                block_copy = self.fences[index].copy()
                 block_copy["x"], block_copy["y"] = fence["x"], fence["y"]
                 hit_box = block_copy["def_hit_box"].copy()
                 hit_box[0] += block_copy["x"] + cam.transform_x
@@ -1425,8 +1551,8 @@ class blocks:
                 block_copy["hitbox"] = pygame.Rect(hit_box[0], hit_box[1], hit_box[2], hit_box[3])
 
                 if block_copy != fence:
-                    self.fences.insert(self.fences.index(fence) - 1, block_copy)
-                    self.fences.remove(fence)
+                    self.all_fences.insert(self.all_fences.index(fence) - 1, block_copy)
+                    self.all_fences.remove(fence)
                     for block in self.all_blocks:
                         if block_copy["y"] + block_copy["image"].get_size()[1] <= block["y"] + block["image"].get_size()[1]:
                             block_copy_rect = pygame.Rect(block_copy["x"], block_copy["y"],
@@ -1453,8 +1579,8 @@ class blocks:
                 block_copy["hitbox"] = pygame.Rect(hit_box[0], hit_box[1], hit_box[2], hit_box[3])
 
                 if block_copy != fence:
-                    self.fences.insert(self.fences.index(fence) - 1, block_copy)
-                    self.fences.remove(fence)
+                    self.all_fences.insert(self.all_fences.index(fence) - 1, block_copy)
+                    self.all_fences.remove(fence)
                     for block in self.all_blocks:
                         if block_copy["y"] + block_copy["image"].get_size()[1] <= block["y"] + \
                                 block["image"].get_size()[1]:
@@ -1480,21 +1606,22 @@ class dialogues:
 
     def draw_block_life_bar(self):
         if self.block is not None:
-            pygame.draw.rect(screen, (0, 0, 0), (
-                self.block["x"] + cam.transform_x + self.block["def_hit_box"][0],
-                self.block["y"] + cam.transform_y + self.block["def_hit_box"][1], tile_size, 15))
-            pygame.draw.rect(screen, (255, 0, 0), (
-                self.block["x"] + cam.transform_x + px + self.block["def_hit_box"][0],
-                self.block["y"] + cam.transform_y + self.block["def_hit_box"][1] + px, tile_size - px*2,
-                9))
-            pygame.draw.rect(screen, (0, 255, 0), (
-                self.block["x"] + cam.transform_x + px + self.block["def_hit_box"][0],
-                self.block["y"] + cam.transform_y + self.block["def_hit_box"][1] + px,
-                (tile_size - px) / self.max_life * self.life, 9))
-
-            self.block = None
-            self.max_life = None
-            self.life = None
+            if player.attack_time < 24:
+                pygame.draw.rect(screen, (0, 0, 0), (
+                    self.block["x"] + cam.transform_x + self.block["def_hit_box"][0],
+                    self.block["y"] + cam.transform_y + self.block["def_hit_box"][1], tile_size, 15))
+                pygame.draw.rect(screen, (255, 0, 0), (
+                    self.block["x"] + cam.transform_x + px + self.block["def_hit_box"][0],
+                    self.block["y"] + cam.transform_y + self.block["def_hit_box"][1] + px, tile_size - px*2,
+                    9))
+                pygame.draw.rect(screen, (0, 255, 0), (
+                    self.block["x"] + cam.transform_x + px + self.block["def_hit_box"][0],
+                    self.block["y"] + cam.transform_y + self.block["def_hit_box"][1] + px,
+                    (tile_size - px) / self.max_life * self.life, 9))
+            else:
+                self.block = None
+                self.max_life = None
+                self.life = None
 
 
 class items:
@@ -1505,73 +1632,79 @@ class items:
         self.all_items = []
         self.cow = {"image": pygame.transform.scale(pygame.image.load("assets/entity/cow/cow_down_1.png"),
                                                     (tile_size, tile_size)),
-                    "x": 0, "y": 0, "max_stack": 1, "price": 150, "placeable": False, "name": "cow", "entity": cow}
+                    "x": 0, "y": 0, "max_stack": 1, "price": 100, "placeable": False, "name": "cow", "entity": cow}
         self.axe = {"image": pygame.transform.scale(pygame.image.load("assets/items/axe.png"), (tile_size, tile_size)),
-                    "x": 0, "y": 0, "max_stack": 1, "price": 30, "placeable": False, "name": "axe", "durability": 50,
+                    "x": 0, "y": 0, "max_stack": 1, "price": 25, "placeable": False, "name": "axe", "durability": 50,
                     "max_durability": 50,
                     "strength": 1}
         self.milk = {
             "image": pygame.transform.scale(pygame.image.load("assets/items/milk.png"), (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": False, "name": "milk"}
+            "y": 0, "max_stack": 64, "price": 15, "placeable": False, "name": "milk"}
         self.wood = {
             "image": pygame.transform.scale(pygame.image.load("assets/items/wood.png"), (tile_size, tile_size)), "x": 0,
             "y": 0, "max_stack": 64, "price": 2, "placeable": False, "name": "wood"}
         self.sapling = {
             "image": pygame.transform.scale(pygame.image.load("assets/blocks/sapling.png"), (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "sapling", "block_state": blocks.sapling}
+            "y": 0, "max_stack": 64, "price": 2, "placeable": True, "name": "sapling", "block_state": blocks.sapling}
         self.cheese = {
             "image": pygame.transform.scale(pygame.image.load("assets/items/cheese.png"), (tile_size, tile_size)),
             "x": 0,
-            "y": 0, "max_stack": 64, "price": 20, "placeable": False, "name": "Smoked\ncheese"}
+            "y": 0, "max_stack": 64, "price": 50, "placeable": False, "name": "Smoked\ncheese"}
         self.cheese_2 = {
             "image": pygame.transform.scale(pygame.image.load("assets/items/cheese_2.png"), (tile_size, tile_size)),
             "x": 0,
-            "y": 0, "max_stack": 64, "price": 20, "placeable": False, "name": "Trappist\ncheese"}
+            "y": 0, "max_stack": 64, "price": 50, "placeable": False, "name": "Trappist\ncheese"}
         self.fence_1 = {
             "image": pygame.transform.scale(blocks.fence_1["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "fence", "block_state": blocks.fence_1}
+            "y": 0, "max_stack": 64, "price": 2, "placeable": True, "name": "fence", "block_state": blocks.fence_1}
         self.gate = {
             "image": pygame.transform.scale(blocks.gate["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "gate", "block_state": blocks.gate}
+            "y": 0, "max_stack": 64, "price": 2, "placeable": True, "name": "gate", "block_state": blocks.gate}
         self.bucket = {
             "image": pygame.transform.scale(blocks.bucket["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "bucket",
+            "y": 0, "max_stack": 64, "price": 8, "placeable": True, "name": "bucket",
             "block_state": blocks.bucket}
         self.milk_bucket = {
             "image": pygame.transform.scale(blocks.milk_bucket["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "milk_bucket",
+            "y": 0, "max_stack": 64, "price": 8, "placeable": True, "name": "milk_bucket",
             "block_state": blocks.milk_bucket}
         self.water_bucket = {
             "image": pygame.transform.scale(blocks.water_bucket["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "water_bucket",
+            "y": 0, "max_stack": 64, "price": 8, "placeable": True, "name": "water_bucket",
             "block_state": blocks.water_bucket}
         self.drinker = {
             "image": pygame.transform.scale(pygame.image.load("assets/items/drinker_item.png"),
                                             (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "drinker",
+            "y": 0, "max_stack": 64, "price": 10, "placeable": True, "name": "drinker",
             "block_state": blocks.drinker}
 
         self.feeder = {
             "image": pygame.transform.scale(pygame.image.load("assets/items/feeder_item.png"),
                                             (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "Feeder",
+            "y": 0, "max_stack": 64, "price": 10, "placeable": True, "name": "feeder",
             "block_state": blocks.feeder}
 
         self.hay_bale = {
             "image": pygame.transform.scale(blocks.hay_bale["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "hay_bale",
+            "y": 0, "max_stack": 64, "price": 10, "placeable": True, "name": "hay_bale",
             "block_state": blocks.hay_bale}
+        self.market = {
+            "image": pygame.transform.scale(pygame.image.load("assets/items/market_item.png"),(tile_size, tile_size)),
+                                            "x": 0, "y": 0, "max_stack": 64, "price": 50, "placeable": True,
+            "name": "market", "block_state": blocks.market}
         self.items = [self.cow, self.axe, self.milk, self.cheese, self.cheese_2, self.wood, self.fence_1, self.gate,
-                      self.feeder, self.drinker, self.hay_bale, self.bucket, self.milk_bucket, self.water_bucket]
+                      self.feeder, self.drinker, self.hay_bale, self.bucket, self.milk_bucket, self.water_bucket,
+                      self.market, self.sapling]
 
     def set_item(self, item, x, y, value=1):
-        item["x"] = x
-        item["y"] = y
-        item["hitbox"] = pygame.Rect(x + cam.transform_x, y + cam.transform_y, tile_size, tile_size)
+        item_copy = item.copy()
+        item_copy["x"] = x
+        item_copy["y"] = y
+        item_copy["hitbox"] = pygame.Rect(x + cam.transform_x, y + cam.transform_y, tile_size, tile_size)
         for i in range(value):
-            self.all_items.append(item.copy())
+            self.all_items.append(item_copy.copy())
         self.time = 0
-        self.reset_items()
+        #self.reset_items()
 
     def draw_items(self):
         for i in self.all_items:
@@ -1603,93 +1736,25 @@ class items:
         else:
             self.time = 0
 
-    def reset_items(self):
-        self.cow = {"image": pygame.transform.scale(pygame.image.load("assets/entity/cow/cow_down_1.png"),
-                                                    (tile_size, tile_size)),
-                    "x": 0, "y": 0, "max_stack": 1, "price": 150, "placeable": False, "name": "cow", "entity": cow}
-        self.axe = {"image": pygame.transform.scale(pygame.image.load("assets/items/axe.png"), (tile_size, tile_size)),
-                    "x": 0, "y": 0, "max_stack": 1, "price": 30, "placeable": False, "name": "axe", "durability": 50,
-                    "max_durability": 50,
-                    "strength": 1}
-        self.milk = {
-            "image": pygame.transform.scale(pygame.image.load("assets/items/milk.png"), (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": False, "name": "milk"}
-        self.wood = {
-            "image": pygame.transform.scale(pygame.image.load("assets/items/wood.png"), (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 2, "placeable": False, "name": "wood"}
-        self.sapling = {
-            "image": pygame.transform.scale(pygame.image.load("assets/blocks/sapling.png"), (tile_size, tile_size)),
-            "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "sapling", "block_state": blocks.sapling}
-        self.cheese = {
-            "image": pygame.transform.scale(pygame.image.load("assets/items/cheese.png"), (tile_size, tile_size)),
-            "x": 0,
-            "y": 0, "max_stack": 64, "price": 20, "placeable": False, "name": "Smoked\ncheese"}
-        self.cheese_2 = {
-            "image": pygame.transform.scale(pygame.image.load("assets/items/cheese_2.png"), (tile_size, tile_size)),
-            "x": 0,
-            "y": 0, "max_stack": 64, "price": 20, "placeable": False, "name": "Trappist\ncheese"}
-        self.fence_1 = {
-            "image": pygame.transform.scale(blocks.fence_1["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "fence", "block_state": blocks.fence_1}
-        self.gate = {
-            "image": pygame.transform.scale(blocks.gate["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "gate", "block_state": blocks.gate}
-        self.bucket = {
-            "image": pygame.transform.scale(blocks.bucket["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "bucket",
-            "block_state": blocks.bucket}
-        self.milk_bucket = {
-            "image": pygame.transform.scale(blocks.milk_bucket["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "milk_bucket",
-            "block_state": blocks.milk_bucket}
-        self.water_bucket = {
-            "image": pygame.transform.scale(blocks.water_bucket["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "water_bucket",
-            "block_state": blocks.water_bucket}
-        self.drinker = {
-            "image": pygame.transform.scale(pygame.image.load("assets/items/drinker_item.png"),
-                                            (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "drinker",
-            "block_state": blocks.drinker}
-
-        self.feeder = {
-            "image": pygame.transform.scale(pygame.image.load("assets/items/feeder_item.png"),
-                                            (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "Feeder",
-            "block_state": blocks.feeder}
-
-        self.hay_bale = {
-            "image": pygame.transform.scale(blocks.hay_bale["image"], (tile_size, tile_size)), "x": 0,
-            "y": 0, "max_stack": 64, "price": 5, "placeable": True, "name": "hay_bale",
-            "block_state": blocks.hay_bale}
-
-
 class inventory:
     def __init__(self):
         self.left = SCREEN_WIDTH / 2 - px * 111 / 2
-        self.item_info = pygame.transform.scale(pygame.image.load('assets/icons/item_info.png'), (tile_size*2, tile_size))
         self.selected_slot = 0
         self.to_change_slot_1 = None
         self.to_change_slot_2 = None
-        self.main_inv_img = pygame.transform.scale(pygame.image.load('assets/icons/inventory.png'), (111*px, 77*px))
-        self.hot_bar_img = pygame.transform.scale(pygame.image.load('assets/icons/hot_bar.png'), (111*px, 26 * px))
-        self.selected_slot_img = pygame.transform.scale(pygame.image.load('assets/icons/selected_slot.png'), (18*px, 18*px))
-        self.inventory_slots = [{"item": items.axe.copy(), "value": 1}, {"item": items.hay_bale, "value": 5},
-                                {"item": items.sapling, "value": 10},
-                                {"item": items.fence_1, "value": 64}, {"item": None, "value": 0}, {"item": None, "value": 0},
-                                {"item": items.milk, "value": 10}, {"item": None, "value": 0},
-                                {"item": None, "value": 0},
-                                {"item": items.hay_bale, "value": 50}, {"item": items.hay_bale, "value": 20},
-                                {"item": None, "value": 0},
-                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
-                                {"item": None, "value": 0}, {"item": items.milk, "value": 10},
-                                {"item": None, "value": 0},
+        self.main_inv_img = pygame.transform.scale(pygame.image.load('assets/GUI/bases/inventory.png'), (111 * px, 77 * px))
+        self.hot_bar_img = pygame.transform.scale(pygame.image.load('assets/GUI/bases/hot_bar.png'), (111 * px, 26 * px))
+        self.selected_slot_img = pygame.transform.scale(pygame.image.load('assets/GUI/icons/selected_slot.png'), (18 * px, 18 * px))
+        self.inventory_slots = [{"item": items.axe.copy(), "value": 1}, {"item": None, "value": 0}, {"item": None, "value": 0},
                                 {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
                                 {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
                                 {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
-                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0}
-                                ]
+                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
+                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
+                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
+                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
+                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0},
+                                {"item": None, "value": 0}, {"item": None, "value": 0}, {"item": None, "value": 0}]
         self.slot_hitboxes = []
         x = self.left + px*5
         y = SCREEN_HEIGHT - 26 * px
@@ -1713,6 +1778,7 @@ class inventory:
                 x = self.left + px*5
                 y = SCREEN_HEIGHT - tile_size * 7 - px*11 + px*68
         self.hand_item = self.inventory_slots[self.selected_slot]["item"]
+        self.shift_clicked = False
 
     def draw_inventory(self):
         if game_state == inventory_state or market.state == 1 or market.state == 2:
@@ -1837,7 +1903,7 @@ class inventory:
             for slot in self.slot_hitboxes:
                 if slot.colliderect(mouse_rect):
                     self.selected_slot = self.slot_hitboxes.index(slot)
-                    if player.left_clicked:
+                    if player.left_clicked and not self.shift_clicked:
                         player.left_clicked = False
                         if market.state == 1:
                             if self.inventory_slots[self.selected_slot] != {"item": None, "value": 0}:
@@ -1884,7 +1950,26 @@ class inventory:
                                     self.inventory_slots[self.to_change_slot_2]
                                 self.to_change_slot_1 = None
                                 self.to_change_slot_2 = None
+
+                    elif self.shift_clicked and player.left_clicked:
+                        if self.selected_slot > 5:
+                            for i in range(6):
+                                if self.inventory_slots[i] == {"item": None, "value": 0}:
+                                    self.inventory_slots[self.selected_slot], self.inventory_slots[i] = self.inventory_slots[i], self.inventory_slots[self.selected_slot]
+                                    break
+                        else:
+                            for i in range(len(self.inventory_slots)):
+                                if len(self.inventory_slots)-1-i > self.selected_slot and len(self.inventory_slots)-1-i > 5:
+                                    if self.inventory_slots[len(self.inventory_slots)-1-i] == {"item": None, "value": 0}:
+                                        self.inventory_slots[self.selected_slot], self.inventory_slots[len(self.inventory_slots)-1-i] = \
+                                        self.inventory_slots[len(self.inventory_slots)-1-i], self.inventory_slots[self.selected_slot]
+                                        break
+
+
                     break
+
+
+
 
     def show_information(self, item, pos):
         if item is not None:
@@ -1902,6 +1987,7 @@ class inventory:
 
 
 class entity:
+
     def __init__(self):
         self.right_hitbox = None
         self.left_hitbox = None
@@ -1917,20 +2003,21 @@ class entity:
         self.can_move_left = True
         self.can_move_right = True
         self.show_icon = False
-        self.warning_icon = pygame.transform.scale(pygame.image.load("assets/icons/warning_icon.png"),
-                                                   (tile_size, tile_size))
+        self.warning_icon = pygame.transform.scale(pygame.image.load("assets/GUI/icons/warning_icon.png"),
+                                                   (px, px*5))
+        self.icons = []
 
     def draw_entity(self):
         self.image = self.sprite
         screen.blit(self.image, (self.pos_x + cam.transform_x, self.pos_y + cam.transform_y))
-        if self.show_icon:
-            pass
         if dev_tools:
             pygame.draw.rect(screen, (255, 0, 0), self.top_hitbox)
             pygame.draw.rect(screen, (255, 0, 0), self.bottom_hitbox)
             pygame.draw.rect(screen, (255, 0, 0), self.left_hitbox)
             pygame.draw.rect(screen, (255, 0, 0), self.right_hitbox)
-
+    def draw_icon(self):
+        for i in self.icons:
+            screen.blit(self.warning_icon, (i.pos_x + cam.transform_x + tile_size/2, i.pos_y + cam.transform_y - px*8))
 
 class player(entity):
     def __init__(self):
@@ -1938,46 +2025,26 @@ class player(entity):
         self.speed = 3
         self.sprinting = False
         self.time = 0
-        self.down_1 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_down_1.png'),
-                                             (tile_size, tile_size))
-        self.down_2 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_down_2.png'),
-                                             (tile_size, tile_size))
-        self.down_3 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_down_3.png'),
-                                             (tile_size, tile_size))
-        self.down_4a = pygame.transform.scale(pygame.image.load('assets/entity/player/player_down_4a.png'),
-                                              (tile_size, tile_size))
-        self.down_4b = pygame.transform.scale(pygame.image.load('assets/entity/player/player_down_4b.png'),
-                                              (tile_size, tile_size))
-        self.up_4a = pygame.transform.scale(pygame.image.load('assets/entity/player/player_up_4a.png'),
-                                            (tile_size, tile_size))
-        self.up_4b = pygame.transform.scale(pygame.image.load('assets/entity/player/player_up_4b.png'),
-                                            (tile_size, tile_size))
-        self.up_1 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_up_1.png'),
-                                           (tile_size, tile_size))
-        self.up_2 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_up_2.png'),
-                                           (tile_size, tile_size))
-        self.up_3 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_up_3.png'),
-                                           (tile_size, tile_size))
-        self.left_1 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_left_1.png'),
-                                             (tile_size, tile_size))
-        self.left_2 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_left_2.png'),
-                                             (tile_size, tile_size))
-        self.left_3 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_left_3.png'),
-                                             (tile_size, tile_size))
-        self.left_4a = pygame.transform.scale(pygame.image.load('assets/entity/player/player_left_4a.png'),
-                                              (tile_size, tile_size))
-        self.left_4b = pygame.transform.scale(pygame.image.load('assets/entity/player/player_left_4b.png'),
-                                              (tile_size, tile_size))
-        self.right_1 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_right_1.png'),
-                                              (tile_size, tile_size))
-        self.right_2 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_right_2.png'),
-                                              (tile_size, tile_size))
-        self.right_3 = pygame.transform.scale(pygame.image.load('assets/entity/player/player_right_3.png'),
-                                              (tile_size, tile_size))
-        self.right_4a = pygame.transform.scale(pygame.image.load('assets/entity/player/player_right_4a.png'),
-                                               (tile_size, tile_size))
-        self.right_4b = pygame.transform.scale(pygame.image.load('assets/entity/player/player_right_4b.png'),
-                                               (tile_size, tile_size))
+        self.down_1 = set_image('entity/player/player_down_1')
+        self.down_2 = set_image('entity/player/player_down_2')
+        self.down_3 = set_image('entity/player/player_down_3')
+        self.down_4a = set_image('entity/player/player_down_4a')
+        self.down_4b = set_image('entity/player/player_down_4b')
+        self.up_4a = set_image('entity/player/player_up_4a')
+        self.up_4b = set_image('entity/player/player_up_4b')
+        self.up_1 = set_image('entity/player/player_up_1')
+        self.up_2 = set_image('entity/player/player_up_2')
+        self.up_3 = set_image('entity/player/player_up_3')
+        self.left_1 = set_image('entity/player/player_left_1')
+        self.left_2 = set_image('entity/player/player_left_2')
+        self.left_3 = set_image('entity/player/player_left_3')
+        self.left_4a = set_image('entity/player/player_left_4a')
+        self.left_4b = set_image('entity/player/player_left_4b')
+        self.right_1 = set_image('entity/player/player_right_1')
+        self.right_2 = set_image('entity/player/player_right_2')
+        self.right_3 = set_image('entity/player/player_right_3')
+        self.right_4a = set_image('entity/player/player_right_4a')
+        self.right_4b = set_image('entity/player/player_right_4b')
         self.sprite = self.down_1
         self.second_sprite = None
         self.direction = 'down'
@@ -1996,9 +2063,11 @@ class player(entity):
         self.right_clicked = False
         self.left_clicked = False
         self.can_place_block = False
-        self.currency = 500000
-        self.coin_img = pygame.transform.scale(pygame.image.load('assets/icons/coin.png'),
+        self.currency = 500
+        self.coin_img = pygame.transform.scale(pygame.image.load('assets/GUI/icons/coin.png'),
                                                (tile_size, tile_size))
+        self.attack_time = 0
+        self.attack_rect = pygame.Rect(0,0,0,0)
 
     def update_hitbox(self):
         self.top_hitbox = pygame.Rect(self.pos_x + cam.transform_x + px*2, self.pos_y + cam.transform_y + px,
@@ -2023,10 +2092,12 @@ class player(entity):
             self.speed = px*2
         else:
             self.speed = px
-        if down_pressed:
+
+        if down_pressed and self.attack_time == 0:
             self.direction = 'down'
             for i in range(int(player.speed / 3)):
                 self.update_hitbox()
+
                 col_checker.check_entity_collision()
                 if self.can_move_down:
                     col_checker.check_block_collision(self.bottom_hitbox, self)
@@ -2045,7 +2116,7 @@ class player(entity):
                 else:
                     break
             moving = True
-        elif up_pressed:
+        elif up_pressed and self.attack_time == 0:
             self.direction = 'up'
             for i in range(int(player.speed / px)):
                 self.update_hitbox()
@@ -2067,7 +2138,7 @@ class player(entity):
                 else:
                     break
             moving = True
-        elif left_pressed:
+        elif left_pressed and self.attack_time == 0:
             self.direction = 'left'
             for i in range(int(player.speed / px)):
                 self.update_hitbox()
@@ -2089,7 +2160,7 @@ class player(entity):
                 else:
                     break
             moving = True
-        elif right_pressed:
+        elif right_pressed and self.attack_time == 0:
             self.direction = 'right'
             for i in range(int(player.speed / px)):
                 self.update_hitbox()
@@ -2114,21 +2185,33 @@ class player(entity):
             moving = True
         # Animation
         if self.sprite == self.down_4a:
-            pygame.time.wait(400)
-            self.sprite = self.down_3
-            self.second_sprite = None
+            if self.attack_time == 24:
+                self.sprite = self.down_3
+                self.second_sprite = None
+                self.attack_time = 0
+            else:
+                self.attack_time += 1
         elif self.sprite == self.up_4a:
-            pygame.time.wait(400)
-            self.sprite = self.up_3
-            self.second_sprite = None
+            if self.attack_time == 24:
+                self.sprite = self.up_3
+                self.second_sprite = None
+                self.attack_time = 0
+            else:
+                self.attack_time += 1
         elif self.sprite == self.right_4a:
-            pygame.time.wait(400)
-            self.sprite = self.right_3
-            self.second_sprite = None
+            if self.attack_time == 24:
+                self.sprite = self.right_3
+                self.second_sprite = None
+                self.attack_time = 0
+            else:
+                self.attack_time += 1
         elif self.sprite == self.left_4a:
-            pygame.time.wait(400)
-            self.sprite = self.left_3
-            self.second_sprite = None
+            if self.attack_time == 24:
+                self.sprite = self.left_3
+                self.second_sprite = None
+                self.attack_time = 0
+            else:
+                self.attack_time += 1
         elif moving:
             if self.direction == "down":
                 if self.time == 0:
@@ -2201,16 +2284,16 @@ class player(entity):
         else:
             if self.direction == "down":
                 self.sprite = self.down_3
-                self.time = 0
+                self.time = 8
             elif self.direction == "up":
                 self.sprite = self.up_3
-                self.time = 0
+                self.time = 8
             elif self.direction == "left":
                 self.sprite = self.left_3
-                self.time = 0
+                self.time = 8
             elif self.direction == "right":
                 self.sprite = self.right_3
-                self.time = 0
+                self.time = 8
 
     def place_block(self):
         if inventory.hand_item is not None:
@@ -2279,7 +2362,7 @@ class player(entity):
 
     def show_preview(self, color, rect, img, pos, fence=None):
         if rect[2] > tile_size:
-            s = pygame.Surface((tile_size * 2, tile_size))
+            s = pygame.Surface((img.get_size()[0], img.get_size()[1]))
         else:
             s = pygame.Surface((tile_size, tile_size))
         s.set_alpha(120)
@@ -2299,7 +2382,7 @@ class player(entity):
 
             code = [0, 0, 0, 0]
 
-            for i in blocks.fences:
+            for i in blocks.all_fences:
                 if i != fence:
                     if hitbox_top.colliderect(i["hitbox"]):
                         code[0] = 1
@@ -2311,40 +2394,8 @@ class player(entity):
                         code[3] = 1
 
             if fence["name"] != "gate":
-                if code == [0, 0, 0, 0]:
-                    temporary_img = blocks.fence_8["image"].__copy__()
-                elif code == [1, 0, 0, 0]:
-                    temporary_img = blocks.fence_14["image"].__copy__()
-                elif code == [0, 1, 0, 0]:
-                    temporary_img = blocks.fence_9["image"].__copy__()
-                elif code == [0, 0, 1, 0]:
-                    temporary_img = blocks.fence_13["image"].__copy__()
-                elif code == [0, 0, 0, 1]:
-                    temporary_img = blocks.fence_10["image"].__copy__()
-                elif code == [1, 1, 0, 0]:
-                    temporary_img = blocks.fence_6["image"].__copy__()
-                elif code == [1, 0, 1, 0]:
-                    temporary_img = blocks.fence_3["image"].__copy__()
-                elif code == [1, 0, 0, 1]:
-                    temporary_img = blocks.fence_4["image"].__copy__()
-                elif code == [1, 1, 1, 0]:
-                    temporary_img = blocks.fence_17["image"].__copy__()
-                elif code == [1, 1, 0, 1]:
-                    temporary_img = blocks.fence_12["image"].__copy__()
-                elif code == [1, 1, 1, 1]:
-                    temporary_img = blocks.fence_16["image"].__copy__()
-                elif code == [0, 1, 1, 0]:
-                    temporary_img = blocks.fence_0["image"].__copy__()
-                elif code == [0, 1, 0, 1]:
-                    temporary_img = blocks.fence_1["image"].__copy__()
-                elif code == [0, 1, 1, 1]:
-                    temporary_img = blocks.fence_11["image"].__copy__()
-                elif code == [0, 0, 1, 1]:
-                    temporary_img = blocks.fence_2["image"].__copy__()
-                elif code == [1, 0, 1, 1]:
-                    temporary_img = blocks.fence_15["image"].__copy__()
-                else:
-                    temporary_img = fence["image"].__copy__()
+                index = code[0] + code[1]*2 + code[2]*4 + code[3]*8
+                temporary_img = blocks.fences[index]["image"].__copy__()
             else:
                 if code == [0, 1, 0, 1] or code == [0, 1, 0, 0] or code == [0, 0, 0, 1]:
                     temporary_img = blocks.gate["image"].__copy__()
@@ -2370,6 +2421,7 @@ class player(entity):
             items.set_item(item, self.pos_x + rnd_y + tile_size, self.pos_y + rnd_x)
 
     def break_block(self):
+
         if self.left_clicked:
             if self.break_time == 0:
                 if inventory.hand_item is not None:
@@ -2401,67 +2453,56 @@ class player(entity):
                                                  self.pos_y + cam.transform_y, tile_size * 2, tile_size)
                         if mouse_rect.colliderect(bottom_mouse_rect):
                             self.direction = "down"
-                            attack_rect = bottom_rect
+                            self.attack_rect = bottom_rect
                             self.sprite = self.down_4a
                             self.second_sprite = self.down_4b
                         elif mouse_rect.colliderect(top_mouse_rect):
                             self.direction = "up"
-                            attack_rect = top_rect
+                            self.attack_rect = top_rect
                             self.sprite = self.up_4a
                             self.second_sprite = self.up_4b
                         elif mouse_rect.colliderect(left_mouse_rect):
                             self.direction = "left"
-                            attack_rect = left_rect
+                            self.attack_rect = left_rect
                             self.sprite = self.left_4a
                             self.second_sprite = self.left_4b
                         elif mouse_rect.colliderect(right_mouse_rect):
                             self.direction = "right"
-                            attack_rect = right_rect
+                            self.attack_rect = right_rect
                             self.sprite = self.right_4a
                             self.second_sprite = self.right_4b
                         else:
                             self.left_clicked = False
                             return
-                        col_checker.check_block_break(attack_rect)
+                        col_checker.check_block_hit(self.attack_rect)
                         self.left_clicked = False
                 self.clicked = True
         if self.clicked:
             self.break_time += 1
-        if self.break_time == 16:
+        if self.break_time == 24:
+            col_checker.check_block_break(self.attack_rect)
             self.break_time = 0
             self.clicked = False
 
     def draw_second_sprite(self):
         if self.second_sprite is not None:
-            if self.direction == "down":
+            if self.sprite == self.down_4a:
                 screen.blit(self.second_sprite,
                             (self.pos_x + cam.transform_x, self.pos_y + cam.transform_y + tile_size))
-            elif self.direction == "up":
+            elif self.sprite == self.up_4a:
                 screen.blit(self.second_sprite,
                             (self.pos_x + cam.transform_x, self.pos_y + cam.transform_y - tile_size))
-            elif self.direction == "left":
+            elif self.sprite == self.left_4a:
                 screen.blit(self.second_sprite,
                             (self.pos_x + cam.transform_x - tile_size, self.pos_y + cam.transform_y))
-            elif self.direction == "right":
+            elif self.sprite == self.right_4a:
                 screen.blit(self.second_sprite,
                             (self.pos_x + cam.transform_x + tile_size, self.pos_y + cam.transform_y))
 
     def draw_coins(self):
         screen.blit(self.coin_img, (tile_size * 15, tile_size / 2 - px*2))
-        if self.currency < 10:
-            draw_text(str(self.currency), text_font, white, tile_size * 14 + px*9, tile_size / 2)
-        elif self.currency < 100:
-            draw_text(str(self.currency), text_font, white, tile_size * 14 + px, tile_size / 2)
-        elif self.currency < 1000:
-            draw_text(str(self.currency), text_font, white, tile_size * 13 + px*11, tile_size / 2)
-        elif self.currency < 10000:
-            draw_text(str(self.currency), text_font, white, tile_size * 13 + px*4, tile_size / 2)
-        elif self.currency < 100000:
-            draw_text(str(self.currency), text_font, white, tile_size * 12 + px*14, tile_size / 2)
-        elif self.currency < 1000000:
-            draw_text(str(self.currency), text_font, white, tile_size * 12 + px*7, tile_size / 2)
-        else:
-            draw_text("tulzas", text_font, white, tile_size * 12, tile_size / 2)
+        img = text_font.render(str(self.currency), True, white)
+        draw_text(str(self.currency), text_font, white, tile_size * 15 - img.get_size()[0] - px *2, tile_size / 2)
 
 
 class cow(entity):
@@ -2471,29 +2512,19 @@ class cow(entity):
         self.wait = 0
         self.pos_x = x + tiles.start_x
         self.pos_y = y + tiles.start_y
-        self.down_1 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_down_1.png'),
-                                             (tile_size, tile_size))
-        self.down_2 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_down_2.png'),
-                                             (tile_size, tile_size))
-        self.down_3 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_down_3.png'),
-                                             (tile_size, tile_size))
-        self.up_1 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_up_1.png'), (tile_size, tile_size))
-        self.up_2 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_up_2.png'), (tile_size, tile_size))
-        self.up_3 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_up_3.png'), (tile_size, tile_size))
-        self.left_1 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_left_1.png'),
-                                             (tile_size, tile_size))
-        self.left_2 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_left_2.png'),
-                                             (tile_size, tile_size))
-        self.left_3 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_left_3.png'),
-                                             (tile_size, tile_size))
-        self.right_1 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_right_1.png'),
-                                              (tile_size, tile_size))
-        self.right_2 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_right_2.png'),
-                                              (tile_size, tile_size))
-        self.right_3 = pygame.transform.scale(pygame.image.load('assets/entity/cow/cow_right_3.png'),
-                                              (tile_size, tile_size))
-        self.warning_icon = pygame.transform.scale(pygame.image.load("assets/icons/warning_icon.png"),
-                                                   (tile_size, tile_size))
+        self.down_1 = set_image('entity/cow/cow_down_1')
+        self.down_2 = set_image('entity/cow/cow_down_2')
+        self.down_3 = set_image('entity/cow/cow_down_3')
+        self.up_1 = set_image('entity/cow/cow_up_1')
+        self.up_2 = set_image('entity/cow/cow_up_2')
+        self.up_3 = set_image('entity/cow/cow_up_3')
+        self.left_1 = set_image('entity/cow/cow_left_1')
+        self.left_2 = set_image('entity/cow/cow_left_2')
+        self.left_3 = set_image('entity/cow/cow_left_3')
+        self.right_1 = set_image('entity/cow/cow_right_1')
+        self.right_2 = set_image('entity/cow/cow_right_2')
+        self.right_3 = set_image('entity/cow/cow_right_3')
+        self.warning_icon = set_image('GUI/icons/warning_icon')
         self.sprite = self.down_1
         self.direction = 'down'
         self.image = self.sprite
@@ -2508,7 +2539,8 @@ class cow(entity):
         self.right_hitbox = pygame.Rect(self.pos_x + tile_size, self.pos_y, 1, tile_size)
         self.main_hitbox = pygame.Rect(self.pos_x, self.pos_y, tile_size, tile_size)
         self.speed = px/3
-        self.cool_down = 0
+        self.max_cool_down = 6000
+        self.cool_down = random.randint(1, self.max_cool_down)
         self.show_icon = False
         self.walking_num = 0
         self.sound_num = random.randint(1, 15000)
@@ -2537,27 +2569,28 @@ class cow(entity):
 
         # Move
         self.update_hitbox()
-        if self.cool_down < 600:
-            self.cool_down += 1
-        else:
+        if self.cool_down == 1:
             self.show_icon = True
+            self.max_cool_down = 6000
+        else:
+            self.cool_down = random.randint(1, self.max_cool_down)
         self.can_move_up = True
         self.can_move_down = True
         self.can_move_left = True
         self.can_move_right = True
         moving = False
         stop = False
-        if self.wait >= 100:
-            if self.wait == 160:
+        if self.wait >= 60:
+            if self.wait == 140:
                 self.rand_num = random.randint(1, 100)
                 stop = False
                 self.wait = 0
             else:
                 moving = False
                 stop = True
-                self.wait += 1
+                self.wait = random.randint(60, 140)
         else:
-            self.wait += 1
+            self.wait = random.randint(1, 60)
         if not stop:
             if self.rand_num <= 25:
                 self.direction = 'down'
@@ -2676,10 +2709,11 @@ class cow(entity):
                 self.time += 1
 
     def drop_item(self):
-        if self.cool_down == 600:
+        if self.show_icon:
             random_x = random.randint(-1 * tile_size, tile_size)
             random_y = random.randint(-1 * tile_size, tile_size)
             items.set_item(items.milk, self.pos_x + random_x, self.pos_y + random_y)
+
             self.cool_down = 0
             self.show_icon = False
 
@@ -2730,14 +2764,15 @@ class save_load:
             else:
                 save_slot = slot
             saved_inventory.append(save_slot)
+
         # MARKET
         saved_market = []
-        for offer in market.offers:
-            if "durability" in offer[0]:
-                save_offer = (offer[0]["name"],offer[1],offer[2],offer[0]["durability"])
+        for i in market.offers:
+            if "durability" in i[0]:
+                offer = {"item":i[0]["name"], "amount": i[1], "price": i[2], "durability": i[0]["durability"]}
             else:
-                save_offer = (offer[0]["name"],offer[1],offer[2])
-            saved_market.append(save_offer)
+                offer = {"item":i[0]["name"], "amount": i[1], "price": i[2]}
+            saved_market.append(offer)
         # ENTITIES
         global entities
         saved_entities = []
@@ -2747,7 +2782,7 @@ class save_load:
         # BLOCKS
         saved_blocks = []
         for i in blocks.all_blocks:
-            saved_block = {"name": i["name"], "x": i["x"]/px, "y": i["y"]/px}
+            saved_block = {"name": i["name"], "x": i["x"] / px, "y": i["y"] / px}
             saved_blocks.append(saved_block)
         # DECORS
         saved_decors = []
@@ -2779,14 +2814,20 @@ class save_load:
                 "entities": saved_entities, "blocks": saved_blocks,
                 "decors": saved_decors, "market": saved_market}
 
-        with open('assets/saves/' + file, 'w') as file:
-            json.dump(data, file)
+        json_str = json.dumps(data)
+        encoded = base64.b64encode(json_str.encode("utf-8"))
+        with open('assets/saves/' + file, 'wb') as f:
+
+            f.write(encoded)
 
     def load(self, file):
         self.current_world = file
 
-        with open('assets/saves/'+ file, 'r') as file:
-            data = json.load(file)
+        with open('assets/saves/'+ file, 'rb') as file:
+            encoded = file.read()
+            json_str = base64.b64decode(encoded).decode("utf-8")
+            data = json.loads(json_str)
+
         inventory.inventory_slots = []
 
         for slot in data["inventory"]:
@@ -2800,15 +2841,17 @@ class save_load:
             if "durability" in slot:
                 self.load_slot["item"]["durability"] = slot["durability"]
             inventory.inventory_slots.append(self.load_slot)
+        # MARKET
+
         market.offers = []
-        for offer in data["market"]:
+        for offer in data["market"]:  #
             for i in items.items:
-                if i["name"] == offer[0]:
-                    self.load_offer = (i.copy(), offer[1], offer[2])
+                if i["name"] == offer["item"]:
+                    loaded_offer = (i.copy(), offer["amount"], offer["price"])
                     break
             if len(offer) > 3:
-                    self.load_offer[0]["durability"] = offer[3]
-            market.offers.append(self.load_offer)
+                loaded_offer[0]["durability"] = offer["durability"]
+            market.offers.append(loaded_offer)
 
         player.pos_x = data["player_pos_x"]*px
         player.pos_y = data["player_pos_y"]*px
@@ -2827,7 +2870,7 @@ class save_load:
             entities.append(cow(i["x"], i["y"]))
 
         # BLOCKS
-        blocks.fences = []
+        blocks.all_fences = []
         blocks.all_blocks = []
         for i in data["blocks"]:
             for j in blocks.blocks:
@@ -2882,28 +2925,25 @@ class start_menu:
         self.left = SCREEN_WIDTH / 2 - px * 111 / 2
         self.pressed = [False, None]
         self.file_names = []
-        self.ask_base = pygame.transform.scale(pygame.image.load("assets/icons/ask_base.png"), (111*px, 77*px))
-        self.trash = pygame.transform.scale(pygame.image.load("assets/icons/trash.png"), (tile_size, tile_size))
-        self.selected_trash = pygame.transform.scale(pygame.image.load("assets/icons/selected_trash.png"), (tile_size, tile_size))
-        self.pressed_trash = pygame.transform.scale(pygame.image.load("assets/icons/pressed_trash.png"),
-                                                     (tile_size, tile_size))
-        self.lever_on = pygame.transform.scale(pygame.image.load("assets/icons/on.png"), (tile_size, px*8))
-        self.lever_off = pygame.transform.scale(pygame.image.load("assets/icons/off.png"), (tile_size, px*8))
-        self.back_screen = pygame.transform.scale(pygame.image.load("assets/icons/back_screen.png"), (tile_size*16, tile_size*12))
-        self.top_button_img = pygame.transform.scale(pygame.image.load("assets/icons/big_button.png"), (148*px, tile_size))
-        self.middle_button_img = pygame.transform.scale(pygame.image.load("assets/icons/big_button.png"), (148 * px, tile_size))
-        self.bottom_button_img = pygame.transform.scale(pygame.image.load("assets/icons/big_button.png"), (148 * px, tile_size))
-        self.quit_button_img = pygame.transform.scale(pygame.image.load("assets/icons/big_button.png"), (148 * px, tile_size))
-        self.big_button_img = pygame.transform.scale(pygame.image.load("assets/icons/big_button.png"), (148 * px, tile_size))
-        self.frame_img = pygame.transform.scale(pygame.image.load("assets/icons/button.png"),
-                                                        (148 * px, tile_size))
-        self.selected_big_button_img = pygame.transform.scale(pygame.image.load("assets/icons/selected_big_button.png"), (148 * px, tile_size))
-        self.pressed_big_button_img = pygame.transform.scale(pygame.image.load("assets/icons/pressed_big_button.png"),
-                                                              (148 * px, tile_size))
-        self.small_button_img = pygame.transform.scale(pygame.image.load("assets/icons/small_button.png"), (31*px, 13*px))
-        self.pressed_button_img = pygame.transform.scale(pygame.image.load("assets/icons/button_pressed.png"),(31 * px, 13 * px))
-        self.selected_button_img = pygame.transform.scale(pygame.image.load("assets/icons/button_selected.png"),
-                                                         (31 * px, 14 * px))
+        self.ask_base = set_image("GUI/bases/ask_base")
+        self.trash = set_image("GUI/buttons/trash")
+        self.selected_trash = set_image("GUI/buttons/selected_trash")
+        self.pressed_trash = set_image("GUI/buttons/pressed_trash")
+        self.lever_on = set_image("GUI/buttons/on")
+        self.lever_off = set_image("GUI/buttons/off")
+        self.back_screen = set_image("GUI/bases/back_screen")
+        self.top_button_img = set_image("GUI/buttons/big_button")
+        self.middle_button_img = set_image("GUI/buttons/big_button")
+        self.bottom_button_img = set_image("GUI/buttons/big_button")
+        self.quit_button_img = set_image("GUI/buttons/big_button")
+        self.big_button_img = set_image("GUI/buttons/big_button")
+        self.frame_img = set_image("GUI/buttons/button")
+        self.selected_big_button_img = set_image("GUI/buttons/selected_big_button")
+        self.pressed_big_button_img = set_image("GUI/buttons/pressed_big_button")
+        self.small_button_img = set_image("GUI/buttons/small_button")
+        self.pressed_button_img = set_image("GUI/buttons/button_pressed")
+        self.selected_button_img = set_image("GUI/buttons/button_selected")
+
         self.no_button = self.small_button_img
         self.yes_button = self.small_button_img
         self.top_button = pygame.Rect(tile_size*3.5, tile_size*4 -px, tile_size*9, tile_size*0.75 + px)
@@ -3093,6 +3133,7 @@ class start_menu:
                 if mouse_rect.colliderect(i):
                     self.current_middle_button = j
                     if player.left_clicked:
+                        blocks.set_blocks(tiles.start_x, tiles.start_y)
                         save_load.load(self.file_names[j])
                         self.middle_button_img = self.big_button_img
                         game_state = play_state
@@ -3120,7 +3161,7 @@ class start_menu:
 
                     if self.world_name == "":
                         
-                        save_load.current_world = "untitled.json"
+                        save_load.current_world = "untitled.cheese"
                         game_state = play_state
                         self.world_name = ""
                         sounds.play_sound(sounds.cursor_sfx)
@@ -3128,12 +3169,12 @@ class start_menu:
                     else:
                         already_name = False
                         for i in self.file_names:
-                            if self.world_name+ ".json" == i:
+                            if self.world_name+ ".cheese" == i:
                                 already_name = True
                                 break
                         if not already_name:
                             self.reset()
-                            save_load.current_world = self.world_name + ".json"
+                            save_load.current_world = self.world_name + ".cheese"
 
                             game_state = play_state
                             self.world_name = ""
@@ -3218,15 +3259,17 @@ class start_menu:
                 self.yes_button = self.small_button_img
                 self.no_button = self.small_button_img
     def reset(self):
+        player.currency = 500
         blocks.all_blocks = []
-        blocks.fences = []
+        blocks.all_fences = []
         decor.decors = []
         decor.setup_decors()
         global entities
         entities = []
         blocks.set_blocks(tiles.start_x, tiles.start_y)
         inventory.__init__()
-        market.offers = []
+        market.__init__()
+        market.markets = 0
         player.pos_x = SCREEN_WIDTH / 2 - tile_size / 2
         player.pos_y = SCREEN_HEIGHT / 2 - tile_size / 2
         cam.__init__()
@@ -3234,16 +3277,23 @@ class start_menu:
 class paused_menu:
     def __init__(self):
         self.left = SCREEN_WIDTH / 2 - px * 111 / 2
-        self.button_img = pygame.transform.scale(pygame.image.load("assets/icons/mid_button.png"), (63*px, 13*px))
-        self.selected_img = pygame.transform.scale(pygame.image.load("assets/icons/selected_mid_button.png"), (63*px, 14*px))
-        self.pressed_img = pygame.transform.scale(pygame.image.load("assets/icons/pressed_mid_button.png"), (63 * px, 13 * px))
-        self.save_icon = pygame.transform.scale(pygame.image.load("assets/icons/save_icon.png"), (13*px, 13*px))
-        self.sound_icon = pygame.transform.scale(pygame.image.load("assets/icons/sound_button.png"), (13*px, 13*px))
-        self.music_icon = pygame.transform.scale(pygame.image.load("assets/icons/music_button.png"), (13 * px, 13 * px))
-        self.slider = pygame.transform.scale(pygame.image.load("assets/icons/slider.png"), (tile_size * 3, px))
-        self.slider_button_img = pygame.transform.scale(pygame.image.load("assets/icons/slider_button.png"), (5 * px, 5 * px))
+        self.button_img = set_image("GUI/buttons/mid_button")
+        self.selected_img = set_image("GUI/buttons/selected_mid_button")
+        self.pressed_img = set_image("GUI/buttons/pressed_mid_button")
+        self.save_icon = set_image("GUI/buttons/save_icon")
+
+        self.sound_button_img = set_image("GUI/buttons/sound_button")
+        self.selected_sound_button = set_image("GUI/buttons/selected_sound_button")
+        self.muted_sound_button = set_image("GUI/buttons/mute_button")
+        self.selected_muted_sound_button = set_image("GUI/buttons/selected_mute_button")
+        self.sound_icon = self.sound_button_img
+
+        self.music_icon = set_image("GUI/buttons/music_button")
+        self.slider = set_image("GUI/icons/slider")
+        self.slider_button_img = set_image("GUI/buttons/slider_button")
+
         self.sound_x = self.left + tile_size * 2 + tile_size * 3 * sounds.sound_effect_volume - px * 2
-        self.slider_button = pygame.Rect(self.sound_x,SCREEN_HEIGHT / 3 + tile_size + px * 11,5*px, 5*px)
+        self.slider_button = pygame.Rect(self.left + tile_size*1.5 + px*4, SCREEN_HEIGHT / 3 + tile_size + px*11,tile_size * 5 + px *4, px*3)
         self.sound_button = pygame.Rect(self.left + px*8, SCREEN_HEIGHT / 3 + tile_size + px*6, 13*px, 13*px)
         self.top_button_img = self.button_img
         self.mid_button_img = self.button_img
@@ -3267,12 +3317,6 @@ class paused_menu:
                         (self.left + tile_size * 1.5, SCREEN_HEIGHT / 3 + tile_size*2 + px*6))
             screen.blit(self.bottom_button_img,
                         (self.left + tile_size * 1.5, SCREEN_HEIGHT / 3 + tile_size * 3 + px*6))
-            #screen.blit(self.save_icon,
-                        #(self.left + px*8, SCREEN_HEIGHT / 3 + tile_size* 3 + px*6))
-            #screen.blit(self.sound_icon,
-                        #(self.left + px*8, SCREEN_HEIGHT / 3 + tile_size * 2 + px*6))
-            #screen.blit(self.music_icon,
-                        #(self.left + px*8, SCREEN_HEIGHT / 3 + tile_size + px*6))
             draw_text("Resume", text_font, white, 0, SCREEN_HEIGHT / 3 + tile_size + px*9, True)
             draw_text("Settings", text_font, white, 0, SCREEN_HEIGHT / 3 + tile_size*2 + px*9, True)
             draw_text("Exit", text_font, white, 0, SCREEN_HEIGHT / 3 + tile_size*3 + px*9, True)
@@ -3341,44 +3385,58 @@ class paused_menu:
                     self.state = 0
                     self.bottom_button_img = self.button_img
             elif mouse_rect.colliderect(self.sound_button):
+                if self.sound_icon == self.sound_button_img:
+                    self.sound_icon = self.selected_sound_button
+                elif self.sound_icon == self.muted_sound_button:
+                    self.sound_icon = self.selected_muted_sound_button
                 if player.left_clicked:
-                    sounds.sound_effect_volume = 0
+                    if sounds.sound_effect_volume == 0:
+                        sounds.sound_effect_volume = 0.5
+                        self.sound_icon = self.selected_sound_button
+                        player.left_clicked = False
+                    else:
+                        self.sound_icon = self.muted_sound_button
+                        sounds.sound_effect_volume = 0
+                        player.left_clicked = False 
+
+
 
             elif mouse_rect.colliderect(self.slider_button):
                 self.bottom_button_img = self.button_img
-                if player.left_clicked and mouse_rect[0] <= self.left + tile_size*2 + tile_size*3 - px*2:
-                    while player.left_clicked:
-                        pos = pygame.mouse.get_pos()
-                        mouse_rect = pygame.Rect(pos[0], pos[1], 15, 15)
-                        if self.left + tile_size * 2 + tile_size * 3 - px * 2 >= \
-                                mouse_rect[0] >= self.left + tile_size*2 - px*2:
-                            self.sound_x = mouse_rect[0]
-                            self.slider_button = pygame.Rect(self.sound_x,SCREEN_HEIGHT / 3 + tile_size + px * 11,5*px, 5*px)
-                            for event in pygame.event.get():
-                                if event.type == pygame.MOUSEBUTTONUP:
-                                    if event.dict['button'] == 1:
-                                        player.left_clicked = False
-                            self.draw()
-                            pygame.display.update()
-                            sounds.sound_effect_volume = (self.sound_x - (self.left + tile_size*2 - px*2))/(tile_size*3)
-                            if sounds.sound_effect_volume < 0.011:
-                                sounds.sound_effect_volume = 0
+                if player.left_clicked:
+                    pos = pygame.mouse.get_pos()
+                    mouse_rect = pygame.Rect(pos[0], pos[1], 15, 15)
+                    if self.left + tile_size * 2 + tile_size * 3 - px * 2 >= \
+                            mouse_rect[0] >= self.left + tile_size*2 - px*2:
+                        self.sound_x = mouse_rect[0]
+                        self.draw()
+                        sounds.sound_effect_volume = (self.sound_x - (self.left + tile_size*2 - px*2))/(tile_size*3)
+                        if sounds.sound_effect_volume < 0.011:
+                            sounds.sound_effect_volume = 0
+                        if sounds.sound_effect_volume == 0:
+                            self.sound_icon = self.muted_sound_button
                         else:
-                            break
+                            self.sound_icon = self.sound_button_img
+
             else:
                 self.bottom_button_img = self.button_img
+                if self.sound_icon == self.selected_sound_button:
+                    self.sound_icon = self.sound_button_img
+                elif self.sound_icon == self.selected_muted_sound_button:
+                    self.sound_icon = self.muted_sound_button
+
 
 
 class sounds:
     def __init__(self):
         self.sound_effect_volume = 0.5
         self.music_volume = 0.5
-        self.moo_sfx = pygame.mixer.Sound('assets/sounds/cow_sound.ogg')
-        self.moo_sfx_2 = pygame.mixer.Sound('assets/sounds/cow_sound_2.ogg')
+        self.moo_sfx = pygame.mixer.Sound('assets/sounds/entity/cow_sound.ogg')
+        self.moo_sfx_2 = pygame.mixer.Sound('assets/sounds/entity/cow_sound_2.ogg')
         self.cursor_sfx = pygame.mixer.Sound('assets/sounds/cursor.ogg')
         self.break_sfx = pygame.mixer.Sound('assets/sounds/break.ogg')
         self.pick_sfx = pygame.mixer.Sound('assets/sounds/pick.ogg')
-        self.place_sfx = pygame.mixer.Sound('assets/sounds/place5.ogg')
+        self.place_sfx = pygame.mixer.Sound('assets/sounds/place.ogg')
     def play_sound(self, sound):
         sound.set_volume(self.sound_effect_volume)
         sound.play()
@@ -3441,9 +3499,8 @@ class develop:
                 self.clicked = False
 
 
-
-
 # Initializing Classes
+entity = entity()
 develop = develop()
 save_load = save_load()
 start_menu = start_menu()
@@ -3454,8 +3511,8 @@ col_checker = collision_checker()
 player = player()
 blocks = blocks()
 items = items()
-trade = trade()
 market = market()
+trade = trade()
 dialogues = dialogues()
 tiles = tiles()
 decor = decor()
@@ -3464,29 +3521,27 @@ inventory = inventory()
 
 # TRADERS
 trader_1 = trader(tile_size * 23, tile_size * 12,
-                  [(items.milk, items.milk["price"]),
-                   (items.cheese, items.cheese["price"]),
-                   (items.cheese_2, items.cheese_2["price"]),
-                   (items.axe, items.axe["price"]),
-                   (items.gate, items.gate["price"], (items.wood, 2)),
-                   (items.fence_1, items.fence_1["price"], (items.wood, 2)),
-
-                   (None, None)])
+                    [(items.axe, items.axe["price"]*2),
+                            (items.gate, items.gate["price"]*2, (items.wood, 1)),
+                            (items.fence_1, items.fence_1["price"]*2, (items.wood, 1)),
+                            (items.cow, items.cow["price"]*2),
+                            (items.market, items.market["price"]*2, (items.wood, 20)),
+                            (None, None)])
 trader_2 = trader(tile_size * 21, tile_size * 12,
-                  [(items.drinker, items.drinker["price"]),
-                   (items.bucket, items.bucket["price"]),
-                   (items.feeder, items.feeder["price"]),
-                   (items.milk_bucket, items.milk_bucket["price"]),
-                   (items.water_bucket, items.water_bucket["price"]),
-                   (items.hay_bale, items.hay_bale["price"]),
-                   (None, None)])
-trader_3 = trader(tile_size * 19, tile_size * 12, [(items.cow, items.cow["price"], (items.hay_bale, 5)), (None, None)])
-traders = [trader_2, trader_3, trader_1]
+                    [(items.hay_bale, items.hay_bale["price"]*2),
+                            (items.drinker, items.drinker["price"]*2),
+                            (items.feeder, items.feeder["price"]*2),
+                            (items.bucket, items.bucket["price"]*2),
+                            (items.milk_bucket, items.milk_bucket["price"]*2),
+                            (items.water_bucket, items.water_bucket["price"]*2),
+                            (None, None)])
+traders = [trader_2, trader_1]
 
 save_load.load_settings()
 entities = []
+
 blocks.set_drops()
-blocks.set_blocks(tiles.start_x, tiles.start_y)
+
 tiles.set_solid_tiles(num_map)
 decor.setup_decors()
 
@@ -3516,7 +3571,11 @@ while run:
                     game_state = play_state
                     inventory.selected_slot = 0
                 elif game_state == trade_state:
-                    game_state = play_state
+                    if trade.state == 0:
+                        trade.leave_trade()
+                        game_state = play_state
+                    else:
+                        trade.state = 0
                 elif game_state == market_state:
                     if market.state == 0:
                         game_state = play_state
@@ -3538,6 +3597,7 @@ while run:
                         paused_menu.state = 0
 
             elif event.key == pygame.K_c and game_state != start_state and allow_dev_tools:
+                pygame.image.save(screen, "screenshot.png")
                 if dev_tools:
                     dev_tools = False
                 else:
@@ -3559,15 +3619,23 @@ while run:
                     elif market.state == 2:
                         market.state = 1
                 elif game_state == trade_state:
-                    trade.leave_trade()
-                    game_state = play_state
+                    if trade.state == 0:
+                        trade.leave_trade()
+                        game_state = play_state
+                    else:
+                        trade.state = 0
+                        trade.value = 1
 
             elif event.key == pygame.K_LSHIFT:
                 player.sprinting = True
+                inventory.shift_clicked = True
 
             elif event.key == pygame.K_y:
                 if dev_tools:
                     develop.add_rect_state = True
+            elif event.key == pygame.K_x:
+                if dev_tools:
+                    develop.add_text()
 
             elif event.key == pygame.K_q:
                 if game_state == play_state or game_state == inventory_state:
@@ -3597,13 +3665,11 @@ while run:
                 if event.dict.get('y') <= -1 and trade.can_buy == 0 and trade.first_trade + 5 != len(trade.trades) and len(
                         trade.trades) > 4:
                     trade.first_trade += 1
-                    trade.can_buy += 1
                     trade.trade_rects = []
                     trade.trade_item_rects = []
                     trade.trade_item_rects_2 = []
                 elif event.dict.get('y') >= 1 and trade.can_buy == 0 and trade.first_trade != 0:
                     trade.first_trade -= 1
-                    trade.can_buy += 1
                     trade.trade_rects = []
                     trade.trade_item_rects = []
                     trade.trade_item_rects_2 = []
@@ -3636,8 +3702,10 @@ while run:
                 player.time = 0
             elif event.key == pygame.K_LSHIFT:
                 player.sprinting = False
+                inventory.shift_clicked = False
 
     clock.tick(FPS)
+    entity.icons = []
     if game_state == start_state:
         start_menu.draw()
         start_menu.handle()
@@ -3652,6 +3720,8 @@ while run:
             i.move()
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
+                if i.show_icon:
+                    entity.icons.append(i)
         for i in traders:
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
@@ -3667,6 +3737,7 @@ while run:
         dialogues.draw_block_life_bar()
         player.draw_second_sprite()
         col_checker.check_item_collision()
+        entity.draw_icon()
         inventory.handle_inventory()
         inventory.draw_inventory()
         player.draw_coins()
@@ -3679,6 +3750,8 @@ while run:
             i.move()
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
+                if i.show_icon:
+                    entity.icons.append(i)
         for i in traders:
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
@@ -3688,6 +3761,7 @@ while run:
         items.move_to_player()
         items.draw_items()
         col_checker.check_item_collision()
+        entity.draw_icon()
         inventory.handle_inventory()
         inventory.draw_inventory()
         player.draw_coins()
@@ -3700,6 +3774,8 @@ while run:
             i.move()
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
+                if i.show_icon:
+                    entity.icons.append(i)
         for i in traders:
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
@@ -3709,6 +3785,7 @@ while run:
         items.move_to_player()
         items.draw_items()
         col_checker.check_item_collision()
+        entity.draw_icon()
         inventory.handle_inventory()
         inventory.draw_inventory()
         trade.handle_trades()
@@ -3723,6 +3800,8 @@ while run:
             i.move()
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
+                if i.show_icon:
+                    entity.icons.append(i)
         for i in traders:
             if i.main_hitbox.colliderect(screen_rect):
                 i.draw_entity()
@@ -3732,6 +3811,7 @@ while run:
         items.move_to_player()
         items.draw_items()
         col_checker.check_item_collision()
+        entity.draw_icon()
         inventory.handle_inventory()
         inventory.draw_inventory()
         market.handle()
@@ -3752,9 +3832,7 @@ while run:
         develop.draw()
         if develop.add_rect_state:
             develop.add_rect()
-
     pygame.display.update()
-
 if game_state != start_state:
     save_load.save(save_load.current_world)
 pygame.quit()
